@@ -1536,16 +1536,24 @@ const Viewer = {
     const verts = obj.verts;
     const groupNames = Object.keys(obj.groups).filter(n => obj.groups[n].faces && obj.groups[n].faces.length);
     const N = Math.max(groupNames.length, 6);
-    // Distinct, recognisably-coloured hues. Saturation kept moderate so the
-    // viewport still reads as engineering-monotone, but each layer is visibly
-    // different — this signals to the user that the swatch is interactive.
-    const layerColor = (i) => {
-      // golden-angle offset → max distinguishability among neighbours
-      const hue = (i * 137.508 + 27) % 360;
-      const lit = (i % 2 === 0) ? 62 : 54;
-      const sat = 48;
-      return { hue, sat, lit };
-    };
+    // Curated non-green palette. The green band 70°–170° is excluded entirely
+    // per the design rule. Saturation kept moderate so the viewport still
+    // reads as engineering-industrial, but each layer is visibly different —
+    // this signals to the user that the swatch is interactive.
+    const NON_GREEN_PALETTE = [
+      { hue:  10, sat: 55, lit: 60 },  // warm red
+      { hue: 215, sat: 40, lit: 62 },  // sky blue
+      { hue:  35, sat: 50, lit: 60 },  // tan-orange
+      { hue: 270, sat: 35, lit: 62 },  // violet
+      { hue:  50, sat: 45, lit: 64 },  // amber
+      { hue: 320, sat: 35, lit: 62 },  // rose-magenta
+      { hue: 240, sat: 30, lit: 60 },  // periwinkle
+      { hue:   0, sat: 30, lit: 56 },  // brick
+      { hue: 200, sat: 30, lit: 56 },  // slate blue
+      { hue: 290, sat: 30, lit: 58 },  // muted purple
+      { hue:  20, sat: 30, lit: 50 }   // rust
+    ];
+    const layerColor = (i) => NON_GREEN_PALETTE[i % NON_GREEN_PALETTE.length];
     let i = 0;
     for (const name of groupNames) {
       const g = obj.groups[name];
