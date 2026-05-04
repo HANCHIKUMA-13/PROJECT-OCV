@@ -212,7 +212,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .col-body { padding: 8px 10px; flex: 1; min-height: 0; overflow: auto; }
 
 /* === Geometry / Layers panel — redesigned for legibility === */
-.geom-tree { font-size: 13px; }
+.geom-tree { font-size: 11px; }
 .layer-bulk {
   display: flex;
   gap: 6px;
@@ -229,11 +229,12 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .geom-row {
   display: grid;
-  grid-template-columns: 16px 18px 1fr 64px;
+  /* eye | swatch | spacer | name+meta | spacer | slider */
+  grid-template-columns: 16px 18px 6px 1fr 6px 64px;
   column-gap: 10px;
-  row-gap: 1px;
+  row-gap: 2px;
   align-items: center;
-  padding: 8px 6px;
+  padding: 12px 8px;
   cursor: pointer;
   border-bottom: 1px solid var(--line-soft);
 }
@@ -245,6 +246,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .geom-eye {
   grid-row: 1 / span 2;
+  grid-column: 1;
   width: 14px;
   height: 14px;
   padding: 0;
@@ -261,6 +263,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .geom-swatch {
   grid-row: 1 / span 2;
+  grid-column: 2;
   width: 18px; height: 18px;
   border: 1px solid var(--text-soft);
   padding: 0;
@@ -276,21 +279,23 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geom-swatch::-webkit-color-swatch { border: none; }
 .geom-swatch::-moz-color-swatch { border: none; }
 
+/* name + meta share the wide text column (col 4) — column 3 is a hard
+   spacer between the icon block (eye+swatch) and the text. */
 .geom-name {
-  grid-column: 3;
+  grid-column: 4;
   grid-row: 1;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: 0.02em;
 }
 .geom-meta {
-  grid-column: 3;
+  grid-column: 4;
   grid-row: 2;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-mute);
   white-space: nowrap;
   overflow: hidden;
@@ -300,7 +305,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geom-row.selected .geom-meta { color: rgba(255,255,255,0.85); }
 
 .geom-opacity {
-  grid-column: 4;
+  grid-column: 6;
   grid-row: 1 / span 2;
   -webkit-appearance: none;
   appearance: none;
@@ -332,16 +337,16 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geom-row.selected .geom-opacity::-webkit-slider-thumb { background: #fff; border-color: var(--accent-red); }
 
 @media (min-width: 1920px) {
-  .geom-tree { font-size: 14px; }
-  .geom-name { font-size: 14px; }
-  .geom-meta { font-size: 11px; }
+  .geom-tree { font-size: 12px; }
+  .geom-name { font-size: 12px; }
+  .geom-meta { font-size: 10px; }
   .geom-swatch { width: 22px; height: 22px; }
   .geom-eye   { width: 16px; height: 16px; }
 }
 @media (min-width: 2560px) {
-  .geom-tree { font-size: 16px; }
-  .geom-name { font-size: 16px; }
-  .geom-meta { font-size: 12px; }
+  .geom-tree { font-size: 14px; }
+  .geom-name { font-size: 14px; }
+  .geom-meta { font-size: 11px; }
   .geom-swatch { width: 26px; height: 26px; }
   .geom-eye   { width: 20px; height: 20px; }
   .geom-opacity { height: 8px; }
@@ -708,7 +713,6 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
         <div class="toggle-row">
           <button id="dShowRefBox">RefBox</button>
           <button id="dShowGround" class="active">Ground</button>
-          <button id="dShowLayers">Layers</button>
         </div>
       </div>
     </div>
@@ -765,7 +769,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 0.0.4 · 04 MAY 2026 · brand + layer panel</div>
+  <div>Edition 0.0.5 · 04 MAY 2026 · layer panel polish</div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -993,7 +997,7 @@ function resetAll() {
   const btnAx = document.getElementById('btnAxes');
   if (btnAx) { btnAx.classList.add('active'); btnAx.textContent = 'Axes ON'; }
   // 7. display option toggles back to factory
-  const dDef = { dShowDom:true, dShowInlet:true, dShowGround:true, dShowGrid:false, dShowRefBox:false, dShowLayers:false };
+  const dDef = { dShowDom:true, dShowInlet:true, dShowGround:true, dShowGrid:false, dShowRefBox:false };
   for (const id in dDef) {
     const b = document.getElementById(id); if (b) b.classList.toggle('active', dDef[id]);
   }
@@ -1399,7 +1403,7 @@ function parseOBJ(text) {
 const Viewer = {
   scene: null, camera: null, renderer: null, controls: null,
   meshes: {},   // groupName -> { mesh, edges, points, color }
-  domainBox: null, inletArrows: null, axes: null, ground: null, refBox: null,
+  domainBox: null, inletArrows: null, axes: null, ground: null, refBox: null, grid: null,
   selected: null,
   autoRot: false,
   displayMode: 'solid',
@@ -1577,6 +1581,7 @@ const Viewer = {
     if (this.inletArrows) { this.scene.remove(this.inletArrows); this.inletArrows=null; }
     if (this.ground) { this.scene.remove(this.ground); this.ground=null; }
     if (this.refBox) { this.scene.remove(this.refBox); this.refBox=null; }
+    if (this.grid)   { this.scene.remove(this.grid);   this.grid=null; }
   },
   loadOBJ(obj) {
     if (!obj) return;
@@ -1737,6 +1742,27 @@ const Viewer = {
     this.scene.add(m);
     this.ground = m;
   },
+  drawGrid(domain) {
+    if (this.grid) this.scene.remove(this.grid);
+    if (!domain) return;
+    const size = Math.max(domain.size.x, domain.size.y);
+    const div = 20;
+    const cs = getComputedStyle(document.body);
+    const c1 = new THREE.Color(cs.getPropertyValue('--text-soft').trim() || '#888');
+    const c2 = new THREE.Color(cs.getPropertyValue('--line').trim() || '#333');
+    const grid = new THREE.GridHelper(size, div, c1, c2);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.6;
+    // GridHelper lies in XZ by default; rotate to XY for Z-up scene
+    grid.rotation.x = Math.PI / 2;
+    grid.position.set(
+      (domain.min.x + domain.max.x) / 2,
+      (domain.min.y + domain.max.y) / 2,
+      domain.min.z + 0.001 // tiny lift so it doesn't z-fight the ground plane
+    );
+    this.scene.add(grid);
+    this.grid = grid;
+  },
   drawRefBox(rb) {
     if (this.refBox) this.scene.remove(this.refBox);
     if (!rb) return;
@@ -1824,6 +1850,7 @@ document.getElementById('dShowDom').addEventListener('click', () => toggleObj('d
 document.getElementById('dShowInlet').addEventListener('click', () => toggleObj('inletArrows','dShowInlet'));
 document.getElementById('dShowGround').addEventListener('click', () => toggleObj('ground','dShowGround'));
 document.getElementById('dShowRefBox').addEventListener('click', () => toggleObj('refBox','dShowRefBox'));
+document.getElementById('dShowGrid').addEventListener('click', () => toggleObj('grid','dShowGrid'));
 
 function toggleObj(prop, btnId) {
   if (Viewer[prop]) {
@@ -1851,6 +1878,21 @@ function refreshUI() {
   document.getElementById('zipNameTop').textContent = STATE.caseName;
   document.getElementById('zipTimeTop').textContent = STATE.uploadedAt ? STATE.uploadedAt.toLocaleString('en-GB',{hour12:false}) : '—';
   document.getElementById('activeCase').textContent = STATE.caseName;
+
+  // load 3D scene FIRST so the geometry tree below can read the live
+  // Viewer.meshes[*].color values when it builds each row.
+  Viewer.clear();
+  if (STATE.obj) Viewer.loadOBJ(STATE.obj);
+  if (p.domain) {
+    Viewer.drawDomain(p.domain);
+    Viewer.drawGround(p.domain);
+    Viewer.drawInletArrows(p.domain, p.flowVelocity || p.inletU || [1,0,0]);
+  }
+  if (p.refBox) Viewer.drawRefBox(p.refBox);
+  if (Viewer.refBox) Viewer.refBox.visible = false;
+  if (p.domain) Viewer.drawGrid(p.domain);
+  if (Viewer.grid) Viewer.grid.visible = false; // off by default
+  Viewer.resetView();
 
   // geometry tree
   const tree = document.getElementById('geomTree');
@@ -1957,18 +1999,6 @@ function refreshUI() {
   } else {
     tree.innerHTML = '<div class="muted mono" style="font-size:10px;">No surface geometry parsed.</div>';
   }
-
-  // viewer
-  Viewer.clear();
-  if (STATE.obj) Viewer.loadOBJ(STATE.obj);
-  if (p.domain) {
-    Viewer.drawDomain(p.domain);
-    Viewer.drawGround(p.domain);
-    Viewer.drawInletArrows(p.domain, p.flowVelocity || p.inletU || [1,0,0]);
-  }
-  if (p.refBox) Viewer.drawRefBox(p.refBox);
-  if (Viewer.refBox) Viewer.refBox.visible = false;
-  Viewer.resetView();
 
   // scene props
   let totalV = 0, totalT = 0, ng = 0;
