@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (for any future tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+
+# Vercel
+.vercel
+
+# Local OpenFOAM scratch (uncomment if you keep cases here)
+# *.zip
+# processor*/
+# postProcessing/
+
+# Tooling output
+.cache/
+.tmp/
+dist/
+build/
