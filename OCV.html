@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OCV — OpenFOAM Case Viewer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@300;400;500;600;700&family=Saira:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f4f4f4;
+  --bg-deep: #ececec;
+  --panel: #fafafa;
+  --line: #c8c8c8;
+  --line-soft: #e0e0e0;
+  --text: #0a0a0a;
+  --text-soft: #555;
+  --text-mute: #888;
+  --accent: #111;
+  --warn: #b04a00;
+  --ok: #2a6f2a;
+  --err: #a01818;
+  --layer-1: #b8b0a0;
+  --layer-2: #a0a8b0;
+  --layer-3: #b0a8b0;
+  --layer-4: #a8b0a8;
+  --layer-5: #b0a8a0;
+  --layer-6: #a0b0b0;
+}
+[data-theme="dark"] {
+  --bg: #0c0c0c;
+  --bg-alt: #161616;
+  --bg-deep: #0a0a0a;
+  --panel: #131313;
+  --line: #303030;
+  --line-soft: #1f1f1f;
+  --text: #f0f0f0;
+  --text-soft: #b8b8b8;
+  --text-mute: #777;
+  --accent: #f0f0f0;
+  --warn: #d97a3a;
+  --ok: #6fbf6f;
+  --err: #d65c5c;
+  --layer-1: #6a6258;
+  --layer-2: #5a6068;
+  --layer-3: #645a64;
+  --layer-4: #5e6a5e;
+  --layer-5: #6a5e58;
+  --layer-6: #586868;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Saira', 'Saira Condensed', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  display: grid;
+  grid-template-rows: 36px 38px 1fr 6px var(--s3h, 280px) 22px;
+  height: 100vh;
+}
+.hresize {
+  background: var(--line-soft);
+  cursor: row-resize;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.hresize:hover { background: var(--line); }
+.mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+.cond { font-family: 'Saira Condensed', 'Saira', sans-serif; letter-spacing: 0.04em; }
+.upper { text-transform: uppercase; }
+.muted { color: var(--text-mute); }
+.soft { color: var(--text-soft); }
+
+button, input[type=file]::file-selector-button {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 0;
+}
+button:hover { background: var(--text); color: var(--bg); }
+button.active { background: var(--text); color: var(--bg); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===================== STRIP 0 ===================== */
+#strip0 {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-alt);
+  padding: 0 12px;
+  gap: 16px;
+}
+#strip0 .left { font-size: 11px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#strip0 .center {
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  font-size: 18px;
+  padding: 0 28px;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+#strip0 .right { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
+.theme-toggle {
+  width: 56px;
+  height: 22px;
+  border: 1px solid var(--line);
+  display: flex;
+  cursor: pointer;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.theme-toggle div {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+.theme-toggle div.on { background: var(--text); color: var(--bg); }
+
+/* ===================== STRIP 1 ===================== */
+#strip1 {
+  display: grid;
+  grid-template-columns: 240px 1fr 360px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+#strip1 > div { padding: 0 12px; display: flex; align-items: center; gap: 8px; }
+#strip1 > div + div { border-left: 1px solid var(--line); }
+#strip1 .case-name { font-size: 11px; letter-spacing: 0.06em; }
+#strip1 .case-name b { font-weight: 600; }
+#console {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-soft);
+  overflow: hidden;
+  white-space: nowrap;
+}
+#console .log-line { padding-right: 18px; }
+#console .log-line.warn { color: var(--warn); }
+#console .log-line.err { color: var(--err); }
+#console .log-line.ok { color: var(--ok); }
+.btn-row { display: flex; gap: 4px; }
+
+/* ===================== STRIP 2 ===================== */
+#strip2 {
+  display: grid;
+  grid-template-columns: 15% 8px 70% 8px 15%;
+  min-height: 0;
+  border-bottom: 1px solid var(--line);
+}
+.resizer { background: var(--line-soft); cursor: col-resize; }
+.resizer:hover { background: var(--line); }
+.col {
+  background: var(--panel);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.col-head {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-alt);
+}
+.col-body { padding: 8px 10px; flex: 1; min-height: 0; overflow: auto; }
+
+/* geometry tree */
+.geom-tree { font-size: 11px; }
+.geom-row {
+  display: grid;
+  grid-template-columns: 14px 14px 1fr 52px auto;
+  align-items: center;
+  padding: 3px 2px;
+  cursor: pointer;
+  gap: 5px;
+}
+.geom-row:hover { background: var(--bg-alt); }
+.geom-row.selected { background: var(--text); color: var(--bg); }
+.geom-row.hidden .geom-name,
+.geom-row.hidden .geom-count { opacity: 0.35; text-decoration: line-through; }
+.geom-eye {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--text);
+  cursor: pointer;
+  display: block;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+.geom-eye[data-vis="0"] { background: transparent; }
+.geom-row.selected .geom-eye { border-color: var(--bg); }
+.geom-row.selected .geom-eye[data-vis="1"] { background: var(--bg); }
+.geom-opacity {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--line);
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+.geom-opacity::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 12px;
+  background: var(--text);
+  border: 1px solid var(--bg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.geom-opacity::-moz-range-thumb {
+  width: 8px;
+  height: 12px;
+  background: var(--text);
+  border: 1px solid var(--bg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.geom-row.selected .geom-opacity { background: var(--bg-deep); }
+.geom-row.selected .geom-opacity::-webkit-slider-thumb { background: var(--bg); border-color: var(--text); }
+.layer-bulk {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 4px;
+}
+.layer-bulk button {
+  flex: 1;
+  font-size: 9px;
+  padding: 2px 4px;
+}
+.geom-swatch {
+  width: 12px; height: 12px;
+  border: 1px solid var(--line);
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  flex-shrink: 0;
+}
+.geom-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.geom-swatch::-webkit-color-swatch { border: none; }
+.geom-swatch::-moz-color-swatch { border: none; }
+.geom-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.geom-count { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-mute); }
+.geom-row.selected .geom-count { color: var(--bg); }
+
+/* viewer */
+#viewer-wrap {
+  position: relative;
+  background: var(--bg-deep);
+  min-height: 0;
+  overflow: hidden;
+}
+#viewer-canvas { display: block; width: 100%; height: 100%; }
+.viewer-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 6px;
+  z-index: 5;
+}
+.viewer-toolbar .group { display: flex; flex-direction: column; gap: 2px; }
+.viewer-toolbar .group + .group { border-top: 1px solid var(--line-soft); padding-top: 4px; margin-top: 2px; }
+.viewer-toolbar .lbl { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-mute); }
+.viewer-toolbar button { padding: 3px 6px; font-size: 9px; min-width: 60px; text-align: left; }
+.axis-label {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-deep);
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  pointer-events: none;
+  letter-spacing: 0.06em;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  white-space: nowrap;
+}
+.axis-label.x { color: #d97a7a; }
+.axis-label.y { color: #7ad97a; }
+.axis-label.z { color: #7a9ad9; }
+.viewer-tooltip {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-mute);
+  background: var(--bg);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+}
+
+/* properties */
+.prop-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 10px; }
+.prop-grid dt { color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+.prop-grid dd { font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+.prop-section { margin-bottom: 12px; }
+.prop-section h4 {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 3px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.toggle-row { display: flex; gap: 0; margin-bottom: 4px; }
+.toggle-row button { flex: 1; min-width: 0; }
+
+/* ===================== STRIP 3 ===================== */
+#strip3 {
+  background: var(--bg);
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+  min-height: 0;
+}
+.dash {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1px;
+  background: var(--line);
+}
+.dash > section {
+  background: var(--bg);
+  padding: 10px 14px;
+  min-height: 120px;
+}
+.dash h3 {
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--text);
+}
+.dash h3 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-mute);
+  margin-right: 8px;
+}
+.s-workflow { grid-column: span 12; }
+.s-models   { grid-column: span 4; }
+.s-equations { grid-column: span 4; }
+.s-bcs      { grid-column: span 4; }
+.s-params   { grid-column: span 4; }
+.s-mesh     { grid-column: span 4; }
+.s-aero     { grid-column: span 4; }
+
+table.kv {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+table.kv td, table.kv th {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+table.kv th {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-mute);
+  font-size: 9px;
+  background: var(--bg-alt);
+}
+table.kv td:first-child { color: var(--text-mute); width: 38%; }
+table.kv td.val { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+table.kv tr.hl td { background: var(--bg-alt); }
+
+.eqn { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 0; line-height: 1.5; }
+.eqn .lbl { color: var(--text-mute); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-top: 4px; }
+
+.pipeline { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+.pipeline .step {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  background: var(--bg-alt);
+  position: relative;
+}
+.pipeline .step + .step { margin-left: -1px; }
+.pipeline .step .t {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.pipeline .step .h {
+  font-weight: 600;
+  font-size: 12px;
+  margin: 2px 0;
+}
+.pipeline .step .d { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-soft); }
+.pipeline .arrow {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-mute);
+}
+
+/* ===================== STRIP 4 ===================== */
+#strip4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--text-mute);
+  background: var(--bg-alt);
+  border-top: 1px solid var(--line);
+  text-transform: uppercase;
+}
+
+/* drop overlay */
+#drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+}
+#drop-overlay.show { display: flex; }
+#drop-overlay .box {
+  border: 2px dashed var(--bg);
+  color: var(--bg);
+  padding: 40px 80px;
+  font-family: 'Saira Condensed', sans-serif;
+  letter-spacing: 0.4em;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+
+/* SVG diagram styling */
+svg.diag { width: 100%; height: auto; display: block; }
+svg.diag text { font-family: 'JetBrains Mono', monospace; font-size: 8px; fill: var(--text); }
+svg.diag .axis { stroke: var(--text-mute); stroke-width: 0.5; fill: none; }
+svg.diag .domain { stroke: var(--text); stroke-width: 1; fill: var(--bg-alt); }
+svg.diag .veh { fill: var(--text); stroke: var(--text); }
+svg.diag .arrow { stroke: var(--text); stroke-width: 1.2; fill: none; }
+svg.diag .arrow-head { fill: var(--text); }
+svg.diag .dim { stroke: var(--text-mute); stroke-width: 0.4; fill: none; }
+svg.diag .dim text { fill: var(--text-mute); }
+svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2; fill: none; }
+
+.scroll-x { overflow-x: auto; }
+
+/* validity dots */
+.dot { display: inline-block; width: 6px; height: 6px; margin-right: 4px; }
+.dot.ok  { background: var(--ok); }
+.dot.warn { background: var(--warn); }
+.dot.err { background: var(--err); }
+
+/* hidden file input */
+#fileInput { display: none; }
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- ============== STRIP 0 ============== -->
+<header id="strip0">
+  <div class="left">
+    <span class="muted upper">Case ::</span>
+    <span id="zipNameTop" class="mono">— no file loaded —</span>
+    <span class="muted" style="margin-left:14px;">|</span>
+    <span class="muted upper" style="margin-left:14px;">Uploaded ::</span>
+    <span id="zipTimeTop" class="mono">—</span>
+  </div>
+  <div class="center">OCV</div>
+  <div class="right">
+    <span class="muted" style="font-size:9px;letter-spacing:0.16em;">THEME</span>
+    <div class="theme-toggle" id="themeToggle">
+      <div data-mode="light">LT</div>
+      <div class="on" data-mode="dark">DK</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============== STRIP 1 ============== -->
+<section id="strip1">
+  <div class="case-name">
+    <span class="muted upper" style="font-size:9px;letter-spacing:0.16em;">Active</span>
+    <b id="activeCase" class="mono" style="margin-left:6px;">none</b>
+  </div>
+  <div id="console"></div>
+  <div class="btn-row" style="justify-content:flex-end;">
+    <button id="btnUpload">Upload</button>
+    <input type="file" id="fileInput" accept=".zip">
+    <button id="btnValidate">Valid</button>
+    <button id="btnReset">Reset</button>
+    <button id="btnDemo">Load Demo</button>
+  </div>
+</section>
+
+<!-- ============== STRIP 2 ============== -->
+<section id="strip2">
+  <div class="col" id="colLeft">
+    <div class="col-head">Geometry / Layers</div>
+    <div class="col-body" id="geomTree">
+      <div class="muted mono" style="font-size:10px;">Awaiting case…</div>
+    </div>
+  </div>
+  <div class="resizer" data-side="left"></div>
+
+  <div class="col" id="colCenter" style="background:var(--bg-deep);position:relative;padding:0;">
+    <div class="col-head">Viewport</div>
+    <div id="viewer-wrap">
+      <canvas id="viewer-canvas"></canvas>
+      <div class="viewer-toolbar">
+        <div class="group">
+          <span class="lbl">Tools</span>
+          <button data-tool="orbit" class="active">Orbit</button>
+          <button data-tool="pan">Pan</button>
+          <button data-tool="zoom">Zoom</button>
+        </div>
+        <div class="group">
+          <span class="lbl">Auto</span>
+          <button id="btnAutoRot">Auto-rotate</button>
+          <button id="btnReset3D">Reset View</button>
+          <button id="btnAxes" class="active">Axes ON</button>
+        </div>
+        <div class="group">
+          <span class="lbl">Camera</span>
+          <button data-cam="front">Front +X</button>
+          <button data-cam="side">Side +Y</button>
+          <button data-cam="top">Top +Z</button>
+          <button data-cam="iso">Isometric</button>
+          <button data-cam="persp" class="active">Perspective</button>
+        </div>
+        <div class="group">
+          <span class="lbl">Display</span>
+          <button data-disp="solid" class="active">Solid</button>
+          <button data-disp="wire">Wireframe</button>
+          <button data-disp="points">Points</button>
+          <button data-disp="overlay">Solid+Wire</button>
+        </div>
+      </div>
+      <div class="axis-label x" id="axL_X">X</div>
+      <div class="axis-label y" id="axL_Y">Y</div>
+      <div class="axis-label z" id="axL_Z">Z</div>
+      <div class="axis-label" id="axL_O" style="opacity:0.7;">0</div>
+      <div class="viewer-tooltip" id="viewerTip">drag = orbit · shift+drag = pan · wheel = zoom</div>
+    </div>
+  </div>
+  <div class="resizer" data-side="right"></div>
+
+  <div class="col" id="colRight">
+    <div class="col-head">Properties / Display</div>
+    <div class="col-body">
+      <div class="prop-section">
+        <h4>Selection</h4>
+        <dl class="prop-grid" id="selProps">
+          <dt>name</dt><dd>—</dd>
+          <dt>verts</dt><dd>—</dd>
+          <dt>tris</dt><dd>—</dd>
+          <dt>bbox</dt><dd>—</dd>
+        </dl>
+      </div>
+      <div class="prop-section">
+        <h4>Scene</h4>
+        <dl class="prop-grid" id="sceneProps">
+          <dt>groups</dt><dd id="pGroups">0</dd>
+          <dt>verts</dt><dd id="pVerts">0</dd>
+          <dt>tris</dt><dd id="pTris">0</dd>
+          <dt>bbox X</dt><dd id="pBboxX">—</dd>
+          <dt>bbox Y</dt><dd id="pBboxY">—</dd>
+          <dt>bbox Z</dt><dd id="pBboxZ">—</dd>
+        </dl>
+      </div>
+      <div class="prop-section">
+        <h4>Display Options</h4>
+        <div class="toggle-row">
+          <button id="dShowDom" class="active">Domain</button>
+          <button id="dShowInlet" class="active">Inlet ▶</button>
+          <button id="dShowGrid">Grid</button>
+        </div>
+        <div class="toggle-row">
+          <button id="dShowRefBox">RefBox</button>
+          <button id="dShowGround" class="active">Ground</button>
+          <button id="dShowLayers">Layers</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hresize" id="hresize" title="drag to resize"></div>
+
+<!-- ============== STRIP 3 ============== -->
+<section id="strip3">
+  <div class="dash">
+    <section class="s-workflow">
+      <h3><span class="num">01</span>Workflow Pipeline</h3>
+      <div class="pipeline" id="pipeline"></div>
+    </section>
+
+    <section class="s-models">
+      <h3><span class="num">02</span>Turbulence · Time · Solver</h3>
+      <table class="kv" id="modelsTbl"></table>
+    </section>
+
+    <section class="s-equations">
+      <h3><span class="num">03</span>Governing Equations</h3>
+      <div id="eqnsBlock">
+        <div class="eqn"><span class="lbl">Continuity (incompressible)</span>∇ · U = 0</div>
+        <div class="eqn"><span class="lbl">Momentum (Navier-Stokes)</span>∂U/∂t + (U·∇)U = −∇p/ρ + ∇·(ν_eff (∇U + ∇U<sup>T</sup>))</div>
+        <div class="eqn"><span class="lbl">Turbulence (S-A DDES)</span>D ν̃ /Dt = c_b1 (1−f_t2) S̃ ν̃ − [c_w1 f_w − c_b1/κ² f_t2] (ν̃/d̃)² + (1/σ)[∇·((ν+ν̃)∇ν̃) + c_b2 (∇ν̃)²]</div>
+        <div class="eqn"><span class="lbl">DDES length scale</span>d̃ = d_w − f_d · max(0, d_w − C_DES · Δ),    Δ = (V_cell)<sup>1/3</sup></div>
+      </div>
+    </section>
+
+    <section class="s-bcs">
+      <h3><span class="num">04</span>Boundary Patches</h3>
+      <table class="kv" id="bcsTbl"></table>
+    </section>
+
+    <section class="s-params">
+      <h3><span class="num">05</span>Parameters · CFL</h3>
+      <table class="kv" id="paramsTbl"></table>
+    </section>
+
+    <section class="s-mesh">
+      <h3><span class="num">06</span>Mesh Setup · Refinement</h3>
+      <table class="kv" id="meshTbl"></table>
+    </section>
+
+    <section class="s-aero">
+      <h3><span class="num">07</span>Aerodynamics</h3>
+      <table class="kv" id="aeroTbl"></table>
+    </section>
+  </div>
+</section>
+
+<!-- ============== STRIP 4 ============== -->
+<footer id="strip4">
+  <div>OCV — OpenFOAM Case Viewer</div>
+  <div>Edition 0.0.2 · 04 MAY 2026 · branch from 0.0.1</div>
+  <div>© Project OCV · MIT-style demo</div>
+</footer>
+
+<div id="drop-overlay"><div class="box">Drop .zip case</div></div>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+<script>
+/* =====================================================
+   OCV — OpenFOAM Case Viewer
+   Single-file MVP. Vanilla JS + three.js + JSZip + pako.
+   ===================================================== */
+
+// ----------- state -----------
+const STATE = {
+  caseName: null,
+  uploadedAt: null,
+  files: {},     // path -> string
+  parsed: null,  // dictionary of extracted parameters
+  obj: null,     // parsed obj { groups, verts }
+  isDemo: false
+};
+
+// ----------- console -----------
+function log(msg, level='info') {
+  const c = document.getElementById('console');
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12:false });
+  const line = document.createElement('span');
+  line.className = 'log-line ' + (level==='warn'?'warn':level==='err'?'err':level==='ok'?'ok':'');
+  line.textContent = `[${ts}] ${msg}`;
+  c.prepend(line);
+  // keep last 30
+  while (c.children.length > 30) c.removeChild(c.lastChild);
+}
+
+// ----------- theme toggle -----------
+document.getElementById('themeToggle').addEventListener('click', e => {
+  const tgt = e.target.closest('div[data-mode]');
+  if (!tgt) return;
+  const mode = tgt.dataset.mode;
+  document.body.dataset.theme = mode;
+  document.querySelectorAll('#themeToggle div').forEach(d => d.classList.toggle('on', d.dataset.mode===mode));
+  if (Viewer.scene) Viewer.applyTheme();
+});
+
+// ----------- column resize -----------
+(function setupResize() {
+  const grid = document.getElementById('strip2');
+  let dragging = null;
+  document.querySelectorAll('#strip2 .resizer').forEach(r => {
+    r.addEventListener('mousedown', e => {
+      dragging = { side: r.dataset.side, x: e.clientX, w: grid.getBoundingClientRect().width };
+      const cs = getComputedStyle(grid).gridTemplateColumns.split(' ').map(parseFloat);
+      dragging.cols = cs;
+      e.preventDefault();
+    });
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - dragging.x;
+    const total = dragging.w;
+    let [l, r1, c, r2, rt] = dragging.cols;
+    if (dragging.side === 'left') {
+      l = Math.max(80, Math.min(total*0.5, l + dx));
+      c = total - l - r1 - r2 - rt;
+    } else {
+      rt = Math.max(80, Math.min(total*0.5, rt - dx));
+      c = total - l - r1 - r2 - rt;
+    }
+    grid.style.gridTemplateColumns = `${l}px 8px ${c}px 8px ${rt}px`;
+    if (Viewer.onResize) Viewer.onResize();
+  });
+  document.addEventListener('mouseup', () => { dragging = null; });
+})();
+
+// horizontal resizer between Strip 2 and Strip 3
+(function setupStrip3Resize() {
+  const handle = document.getElementById('hresize');
+  if (!handle) return;
+  let dragging = false, startY = 0, startH = 280;
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startY = e.clientY;
+    const cs = getComputedStyle(document.body).getPropertyValue('--s3h').trim();
+    startH = parseFloat(cs) || 280;
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dy = e.clientY - startY;
+    // dragging up → larger Strip 3; dragging down → smaller
+    const newH = Math.max(60, Math.min(window.innerHeight - 200, startH - dy));
+    document.body.style.setProperty('--s3h', newH + 'px');
+    if (Viewer.onResize) Viewer.onResize();
+  });
+  document.addEventListener('mouseup', () => {
+    if (dragging) { dragging = false; document.body.style.userSelect = ''; }
+  });
+})();
+
+// ----------- buttons -----------
+document.getElementById('btnUpload').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadZipFile(f, false);
+});
+document.getElementById('btnReset').addEventListener('click', resetAll);
+document.getElementById('btnDemo').addEventListener('click', loadDemo);
+document.getElementById('btnValidate').addEventListener('click', validate);
+
+// ----------- drop zone -----------
+const overlay = document.getElementById('drop-overlay');
+window.addEventListener('dragenter', e => { e.preventDefault(); overlay.classList.add('show'); });
+overlay.addEventListener('dragover', e => e.preventDefault());
+overlay.addEventListener('dragleave', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+overlay.addEventListener('drop', e => {
+  e.preventDefault();
+  overlay.classList.remove('show');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.toLowerCase().endsWith('.zip')) loadZipFile(f, false);
+  else log('Drop a .zip OpenFOAM case', 'warn');
+});
+
+// ----------- zip ingest -----------
+async function loadZipFile(file, isDemo) {
+  log(`Reading ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)…`);
+  const buf = await file.arrayBuffer();
+  try {
+    const zip = await JSZip.loadAsync(buf);
+    STATE.files = {};
+    STATE.caseName = isDemo ? 'demo case' : file.name.replace(/\.zip$/i,'');
+    STATE.uploadedAt = new Date();
+    STATE.isDemo = isDemo;
+
+    const entries = Object.values(zip.files).filter(f => !f.dir);
+    log(`${entries.length} entries in archive`);
+
+    // collect text dicts + obj
+    let objText = null, objName = null;
+    for (const entry of entries) {
+      const n = entry.name;
+      if (/\.(obj)(\.gz)?$/i.test(n)) {
+        log(`Decoding geometry ${n}…`);
+        const data = await entry.async('uint8array');
+        try {
+          if (n.endsWith('.gz')) {
+            const txt = pako.inflate(data, { to: 'string' });
+            objText = txt; objName = n;
+          } else {
+            objText = new TextDecoder().decode(data);
+            objName = n;
+          }
+        } catch (err) {
+          log('OBJ decode failed: ' + err.message, 'err');
+        }
+      } else if (/(controlDict|fvSchemes|fvSolution|momentumTransport|transportProperties|blockMeshDict|snappyHexMeshDict|decomposeParDict|forceCoeffs|cuttingPlane|streamLines|initialConditions|fixedInlet)$/i.test(n.split('/').pop())
+                 || /\/0\/(U|p|k|nut|nuTilda|omega)$/.test(n)) {
+        const txt = await entry.async('string');
+        STATE.files[n] = txt;
+      }
+    }
+
+    log(`Parsed ${Object.keys(STATE.files).length} dictionaries`, 'ok');
+
+    STATE.parsed = parseAll(STATE.files);
+    if (objText) {
+      log(`Parsing OBJ (${(objText.length/1024/1024).toFixed(1)} MB) …`);
+      STATE.obj = parseOBJ(objText);
+      log(`OBJ: ${Object.keys(STATE.obj.groups).length} named groups, ${STATE.obj.verts.length.toLocaleString()} verts`, 'ok');
+    } else {
+      STATE.obj = null;
+      log('No .obj geometry inside zip', 'warn');
+    }
+
+    refreshUI();
+    log('Case ready', 'ok');
+  } catch (err) {
+    log('Zip load failed: ' + err.message, 'err');
+    console.error(err);
+  }
+}
+
+function resetAll() {
+  STATE.caseName = null;
+  STATE.uploadedAt = null;
+  STATE.files = {};
+  STATE.parsed = null;
+  STATE.obj = null;
+  STATE.isDemo = false;
+  document.getElementById('zipNameTop').textContent = '— no file loaded —';
+  document.getElementById('zipTimeTop').textContent = '—';
+  document.getElementById('activeCase').textContent = 'none';
+  document.getElementById('geomTree').innerHTML = '<div class="muted mono" style="font-size:10px;">Awaiting case…</div>';
+  document.getElementById('console').innerHTML = '';
+  ['modelsTbl','paramsTbl','meshTbl','aeroTbl','bcsTbl'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  document.getElementById('pipeline').innerHTML = '';
+  Viewer.clear();
+  log('Reset', 'ok');
+}
+
+function validate() {
+  if (!STATE.parsed) { log('Nothing to validate — load a case first','warn'); return; }
+  const checks = [];
+  const p = STATE.parsed;
+  checks.push(['controlDict.application', !!p.application, p.application||'missing']);
+  checks.push(['transportProperties.nu', !!p.nu, p.nu||'missing']);
+  checks.push(['momentumTransport.simulationType', !!p.simulationType, p.simulationType||'missing']);
+  checks.push(['blockMeshDict vertices', !!p.domain, p.domain ? `${p.domain.size.x}×${p.domain.size.y}×${p.domain.size.z} m` : 'missing']);
+  checks.push(['snappyHexMesh refinement', !!p.refSurface, p.refSurface ? `(${p.refSurface.min},${p.refSurface.max})` : 'missing']);
+  checks.push(['inlet U', !!p.inletU, p.inletU? `(${p.inletU.join(' ')})`:'missing']);
+  checks.push(['CFL plausible', p.cflWake!=null && p.cflWake < 5, p.cflWake!=null?`CFL_wake=${p.cflWake.toFixed(2)}`:'n/a']);
+  let pass = 0;
+  for (const [name, ok, val] of checks) {
+    log(`${ok?'OK ':'!! '} ${name}: ${val}`, ok?'ok':'warn');
+    if (ok) pass++;
+  }
+  log(`Validation: ${pass}/${checks.length} passed`, pass===checks.length?'ok':'warn');
+}
+
+// ----------- OpenFOAM dict parsing -----------
+function stripComments(t) {
+  return t
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/.*$/gm, ' ');
+}
+
+function findKey(text, key) {
+  const t = stripComments(text);
+  const re = new RegExp('(?:^|\\s)' + key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s+([^;{]+);');
+  const m = t.match(re);
+  return m ? m[1].trim() : null;
+}
+
+function findVecList(text, key) {
+  // returns string content inside (...)
+  const t = stripComments(text);
+  const re = new RegExp(key + '\\s*\\(([\\s\\S]*?)\\)');
+  const m = t.match(re);
+  return m ? m[1].trim() : null;
+}
+
+function findBlock(text, key) {
+  const t = stripComments(text);
+  const idx = t.search(new RegExp('(^|\\s)' + key + '\\s*\\{'));
+  if (idx < 0) return null;
+  const start = t.indexOf('{', idx);
+  let depth = 0, i = start;
+  for (; i < t.length; i++) {
+    if (t[i] === '{') depth++;
+    else if (t[i] === '}') { depth--; if (depth===0) { i++; break; } }
+  }
+  return t.slice(start+1, i-1);
+}
+
+function findFile(files, basename) {
+  for (const k in files) if (k.split('/').pop() === basename) return files[k];
+  return null;
+}
+
+// Locate the body of a parenthesised list anchored by `keyword` — walks
+// balanced parentheses so nested `faces (...)` lists do not cut it short.
+function extractParenList(text, keyword) {
+  const t = stripComments(text);
+  const re = new RegExp('(?:^|\\s)' + keyword + '\\s*\\(', 'g');
+  const m = re.exec(t);
+  if (!m) return null;
+  let i = m.index + m[0].length; // just past the opening (
+  let depth = 1;
+  const start = i;
+  while (i < t.length && depth) {
+    if (t[i] === '(') depth++;
+    else if (t[i] === ')') { depth--; if (depth === 0) break; }
+    i++;
+  }
+  return t.slice(start, i);
+}
+
+// Parse `name { type X; ... }` patch entries inside a (already-extracted)
+// boundary-list body, walking balanced braces so the nested `faces (...)`
+// is ignored.
+function parsePatchBlocks(inner) {
+  const out = [];
+  let i = 0;
+  while (i < inner.length) {
+    while (i < inner.length && /\s/.test(inner[i])) i++;
+    if (i >= inner.length) break;
+    // a numeric token (polyMesh count) or stray comma — skip until next identifier
+    if (!/[A-Za-z_]/.test(inner[i])) { i++; continue; }
+    let name = '';
+    while (i < inner.length && /[\w.\-]/.test(inner[i])) name += inner[i++];
+    while (i < inner.length && /\s/.test(inner[i])) i++;
+    if (inner[i] !== '{') continue;
+    let depth = 1, body = '';
+    i++;
+    while (i < inner.length && depth) {
+      if (inner[i] === '{') depth++;
+      else if (inner[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+      body += inner[i++];
+    }
+    const tm = body.match(/\btype\s+(\w+)\s*;/);
+    if (tm && name) out.push({ name, type: tm[1] });
+  }
+  return out;
+}
+
+// Parse a `boundary ( ... );` list (blockMeshDict) or polyMesh/boundary.
+function parseBoundaryList(text) {
+  // explicit boundary keyword (blockMeshDict)
+  let inner = extractParenList(text, 'boundary');
+  if (inner) return parsePatchBlocks(inner);
+  // polyMesh/boundary: top-level "<N> ( ... )" — find the outer-most ( and walk
+  const t = stripComments(text);
+  const m = t.match(/\b\d+\s*\(/);
+  if (!m) return [];
+  let i = m.index + m[0].length, depth = 1, start = i;
+  while (i < t.length && depth) {
+    if (t[i] === '(') depth++;
+    else if (t[i] === ')') { depth--; if (depth === 0) break; }
+    i++;
+  }
+  return parsePatchBlocks(t.slice(start, i));
+}
+
+// Parse the boundaryField block of a 0/* dict and return { patchName: bcType }.
+function parseBoundaryFieldTypes(text) {
+  const blk = findBlock(text, 'boundaryField');
+  if (!blk) return {};
+  const out = {};
+  // Patch entries can be quoted ("motorBike_.*"). Walk balanced braces.
+  let i = 0;
+  while (i < blk.length) {
+    // skip whitespace
+    while (i < blk.length && /\s/.test(blk[i])) i++;
+    if (i >= blk.length) break;
+    // read name (possibly quoted)
+    let name = '';
+    if (blk[i] === '"') {
+      i++;
+      while (i < blk.length && blk[i] !== '"') name += blk[i++];
+      i++;
+    } else {
+      while (i < blk.length && /[\w.\-*()|]/.test(blk[i])) name += blk[i++];
+    }
+    if (!name) { i++; continue; }
+    // skip whitespace then expect {
+    while (i < blk.length && /\s/.test(blk[i])) i++;
+    if (blk[i] !== '{') { i++; continue; }
+    // walk balanced braces
+    let depth = 1, body = '';
+    i++;
+    while (i < blk.length && depth) {
+      if (blk[i] === '{') depth++;
+      else if (blk[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+      body += blk[i++];
+    }
+    const tm = body.match(/\btype\s+(\w+)\s*;/);
+    if (tm) out[name] = tm[1];
+  }
+  return out;
+}
+
+function parseAll(files) {
+  const out = {};
+
+  // controlDict — RANS stage (used for application)
+  const cd = findFile(files, 'controlDict');
+  if (cd) {
+    out.application = findKey(cd, 'application');
+    out.deltaT = parseFloat(findKey(cd, 'deltaT'));
+    out.endTime = parseFloat(findKey(cd, 'endTime'));
+    out.startTime = parseFloat(findKey(cd, 'startTime'));
+    out.writeInterval = parseFloat(findKey(cd, 'writeInterval'));
+  }
+  // LES controlDict (lesFiles/controlDict) — overrides if present
+  const lesCd = files['LES_RL9-10_v100ms/lesFiles/controlDict']
+              || Object.entries(files).find(([k]) => k.includes('lesFiles/controlDict'))?.[1];
+  if (lesCd) {
+    out.lesApplication = findKey(lesCd, 'application');
+    out.lesDeltaT = parseFloat(findKey(lesCd, 'deltaT'));
+    out.lesEndTime = parseFloat(findKey(lesCd, 'endTime'));
+  }
+
+  // transportProperties
+  const tp = findFile(files, 'transportProperties');
+  if (tp) {
+    const m = tp.match(/nu\s+\[[^\]]*\]\s+([0-9.eE+\-]+)/);
+    if (m) out.nu = parseFloat(m[1]);
+  }
+
+  // momentumTransport — prefer LES file
+  const lesMt = Object.entries(files).find(([k]) => k.includes('lesFiles/momentumTransport'))?.[1];
+  const ransMt = findFile(files, 'momentumTransport');
+  const mt = lesMt || ransMt;
+  if (mt) {
+    out.simulationType = findKey(mt, 'simulationType');
+    if (out.simulationType === 'LES') {
+      const lesBlk = findBlock(mt, 'LES');
+      if (lesBlk) {
+        out.lesModel = findKey(lesBlk, 'model');
+        out.lesDelta = findKey(lesBlk, 'delta');
+      }
+    } else {
+      const rasBlk = findBlock(mt, 'RAS');
+      if (rasBlk) out.rasModel = findKey(rasBlk, 'model');
+    }
+  }
+  if (ransMt && ransMt !== mt) {
+    const rasBlk = findBlock(ransMt, 'RAS');
+    if (rasBlk) out.rasModel = findKey(rasBlk, 'model');
+  }
+
+  // 0/U — inlet velocity
+  const Ufile = findFile(files, 'U');
+  if (Ufile) {
+    const m = Ufile.match(/internalField\s+uniform\s+\(([^)]+)\)/);
+    if (m) out.inletU = m[1].trim().split(/\s+/).map(Number);
+    const fv = Ufile.match(/flowVelocity\s+\(([^)]+)\)/);
+    if (fv) out.flowVelocity = fv[1].trim().split(/\s+/).map(Number);
+  }
+
+  // initialConditions
+  const ic = findFile(files, 'initialConditions');
+  if (ic) {
+    const k = ic.match(/turbulentKE\s+([0-9.eE+\-]+)/);
+    if (k) out.turbKE = parseFloat(k[1]);
+    const w = ic.match(/turbulentOmega\s+([0-9.eE+\-]+)/);
+    if (w) out.turbOmega = parseFloat(w[1]);
+  }
+
+  // blockMeshDict — vertices + cell counts
+  const bm = findFile(files, 'blockMeshDict');
+  if (bm) {
+    const verts = [];
+    const reV = /\(\s*(-?[\d.eE+\-]+)\s+(-?[\d.eE+\-]+)\s+(-?[\d.eE+\-]+)\s*\)/g;
+    const vBlock = bm.match(/vertices\s*\(([\s\S]*?)\)\s*;/);
+    if (vBlock) {
+      let m;
+      while ((m = reV.exec(vBlock[1])) !== null) verts.push([+m[1], +m[2], +m[3]]);
+    }
+    if (verts.length >= 8) {
+      const xs = verts.map(v=>v[0]), ys = verts.map(v=>v[1]), zs = verts.map(v=>v[2]);
+      out.domain = {
+        min: { x: Math.min(...xs), y: Math.min(...ys), z: Math.min(...zs) },
+        max: { x: Math.max(...xs), y: Math.max(...ys), z: Math.max(...zs) }
+      };
+      out.domain.size = {
+        x: out.domain.max.x - out.domain.min.x,
+        y: out.domain.max.y - out.domain.min.y,
+        z: out.domain.max.z - out.domain.min.z
+      };
+    }
+    const blk = bm.match(/hex\s*\([^)]*\)\s*\((\d+)\s+(\d+)\s+(\d+)\)/);
+    if (blk) out.cells = { x:+blk[1], y:+blk[2], z:+blk[3] };
+    out.bmPatches = parseBoundaryList(bm);
+  }
+
+  // boundary file from polyMesh (if mesh is shipped) — supplements blockMesh patches
+  const polyB = Object.entries(files).find(([k]) => /polyMesh\/boundary$/.test(k))?.[1];
+  if (polyB) {
+    out.polyPatches = parseBoundaryList(polyB);
+  }
+
+  // U boundaryField — gives us BC types per patch (incl. wildcard patches like motorBike_.*)
+  if (Ufile) {
+    out.uBC = parseBoundaryFieldTypes(Ufile);
+  }
+
+  // snappyHexMesh
+  const sh = findFile(files, 'snappyHexMeshDict');
+  if (sh) {
+    const surf = sh.match(/motorBike\s*\{[^}]*level\s*\(\s*(\d+)\s+(\d+)\s*\)/);
+    if (surf) out.refSurface = { name:'motorBike', min:+surf[1], max:+surf[2] };
+    const reg = sh.match(/refinementBox\s*\{[^}]*levels\s*\(\s*\(\s*[^\s]+\s+(\d+)\s*\)\s*\)/);
+    if (reg) out.refRegion = { name:'refinementBox', level:+reg[1] };
+    const rb = sh.match(/refinementBox[\s\S]*?min\s*\(\s*([\-\d.\s]+?)\)\s*;[\s\S]*?max\s*\(\s*([\-\d.\s]+?)\)/);
+    if (rb) {
+      const mn = rb[1].trim().split(/\s+/).map(Number);
+      const mx = rb[2].trim().split(/\s+/).map(Number);
+      out.refBox = { min:{x:mn[0],y:mn[1],z:mn[2]}, max:{x:mx[0],y:mx[1],z:mx[2]} };
+    }
+    out.maxGlobalCells = parseFloat(findKey(sh, 'maxGlobalCells'));
+  }
+
+  // decomposeParDict (any of the variants)
+  const dp = Object.entries(files).find(([k]) => /decomposeParDict/.test(k))?.[1];
+  if (dp) {
+    out.nProcs = parseInt(findKey(dp, 'numberOfSubdomains'));
+    out.decompMethod = findKey(dp, 'method');
+  }
+
+  // forceCoeffs
+  const fc = findFile(files, 'forceCoeffs');
+  if (fc) {
+    out.lRef = parseFloat(findKey(fc, 'lRef'));
+    out.Aref = parseFloat(findKey(fc, 'Aref'));
+    out.magUInf = parseFloat(findKey(fc, 'magUInf'));
+    out.rhoInf = parseFloat(findKey(fc, 'rhoInf'));
+    const ld = fc.match(/liftDir\s+\(([^)]+)\)/); if (ld) out.liftDir = ld[1].trim().split(/\s+/).map(Number);
+    const dd = fc.match(/dragDir\s+\(([^)]+)\)/); if (dd) out.dragDir = dd[1].trim().split(/\s+/).map(Number);
+    const pa = fc.match(/pitchAxis\s+\(([^)]+)\)/); if (pa) out.pitchAxis = pa[1].trim().split(/\s+/).map(Number);
+  }
+
+  // fvSchemes (LES preferred)
+  const lesFv = Object.entries(files).find(([k]) => k.includes('lesFiles/fvSchemes'))?.[1];
+  const ransFv = findFile(files, 'fvSchemes');
+  const fv = lesFv || ransFv;
+  if (fv) {
+    out.ddtScheme = findKey(findBlock(fv,'ddtSchemes')||'', 'default');
+    const div = findBlock(fv,'divSchemes') || '';
+    out.divU = findKey(div, 'div\\(phi,U\\)');
+    out.lapScheme = findKey(findBlock(fv,'laplacianSchemes')||'', 'default');
+  }
+
+  // fvSolution (LES preferred)
+  const lesFs = Object.entries(files).find(([k]) => k.includes('lesFiles/fvSolution'))?.[1];
+  const ransFs = findFile(files, 'fvSolution');
+  const fs = lesFs || ransFs;
+  if (fs) {
+    const piso = findBlock(fs, 'PISO');
+    if (piso) out.nCorrectors = parseInt(findKey(piso, 'nCorrectors'));
+    const simple = findBlock(fs, 'SIMPLE');
+    if (simple) out.nNonOrthCorr = parseInt(findKey(simple, 'nNonOrthogonalCorrectors'));
+  }
+
+  // ----- derived quantities -----
+  if (out.domain && out.cells) {
+    out.baseCell = {
+      x: out.domain.size.x / out.cells.x,
+      y: out.domain.size.y / out.cells.y,
+      z: out.domain.size.z / out.cells.z
+    };
+  }
+  if (out.baseCell && out.refSurface) {
+    out.cellAtMin = (Math.min(out.baseCell.x, out.baseCell.y, out.baseCell.z)) / Math.pow(2, out.refSurface.min);
+    out.cellAtMax = (Math.min(out.baseCell.x, out.baseCell.y, out.baseCell.z)) / Math.pow(2, out.refSurface.max);
+  }
+  if (out.baseCell && out.refRegion) {
+    out.cellAtWake = (Math.min(out.baseCell.x, out.baseCell.y, out.baseCell.z)) / Math.pow(2, out.refRegion.level);
+  }
+  // Reynolds
+  const Uref = out.magUInf || (out.flowVelocity ? Math.hypot(...out.flowVelocity) : (out.inletU?Math.hypot(...out.inletU):null));
+  out.Uref = Uref;
+  if (Uref && out.lRef && out.nu) out.Re = Uref * out.lRef / out.nu;
+  // CFL estimates
+  const dt = out.lesDeltaT || out.deltaT;
+  out.lesDt = dt;
+  if (dt && Uref && out.cellAtWake) out.cflWake = Uref * dt / out.cellAtWake;
+  if (dt && Uref && out.cellAtMax) out.cflSurface = Uref * dt / out.cellAtMax;
+
+  return out;
+}
+
+// ----------- OBJ parsing -----------
+function parseOBJ(text) {
+  const verts = [];
+  const groups = {};   // name -> { faces: [[i,i,i]] }
+  let current = 'default';
+  groups[current] = { faces: [] };
+  const lines = text.split('\n');
+  for (let li=0; li<lines.length; li++) {
+    const line = lines[li];
+    if (line.length < 2) continue;
+    const c = line.charCodeAt(0);
+    if (c === 118 && line.charCodeAt(1) === 32) {       // 'v '
+      const p = line.split(/\s+/);
+      verts.push([+p[1], +p[2], +p[3]]);
+    } else if (c === 103 && line.charCodeAt(1) === 32) { // 'g '
+      current = line.slice(2).trim() || 'default';
+      if (!groups[current]) groups[current] = { faces: [] };
+    } else if (c === 111 && line.charCodeAt(1) === 32) { // 'o '
+      current = line.slice(2).trim() || 'default';
+      if (!groups[current]) groups[current] = { faces: [] };
+    } else if (c === 102 && line.charCodeAt(1) === 32) { // 'f '
+      const parts = line.split(/\s+/);
+      const idx = [];
+      for (let i=1; i<parts.length; i++) {
+        const s = parts[i];
+        if (!s) continue;
+        const v = parseInt(s.split('/')[0], 10);
+        if (!isNaN(v)) idx.push(v - 1);
+      }
+      // triangulate
+      const arr = groups[current].faces;
+      for (let i=1; i<idx.length-1; i++) arr.push([idx[0], idx[i], idx[i+1]]);
+    }
+  }
+  return { verts, groups };
+}
+
+// ----------- 3D viewer -----------
+const Viewer = {
+  scene: null, camera: null, renderer: null, controls: null,
+  meshes: {},   // groupName -> { mesh, edges, points, color }
+  domainBox: null, inletArrows: null, axes: null, ground: null, refBox: null,
+  selected: null,
+  autoRot: false,
+  displayMode: 'solid',
+  init() {
+    const wrap = document.getElementById('viewer-wrap');
+    const canvas = document.getElementById('viewer-canvas');
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 5000);
+    this.camera.position.set(20, -20, 12);
+    this.camera.up.set(0,0,1);
+    this.applyTheme();
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.7);
+    dl.position.set(5, -10, 8);
+    this.scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dl2.position.set(-8, 5, -3);
+    this.scene.add(dl2);
+    // axes
+    this.axisLen = 2.5;
+    this.axes = makeAxes(this.axisLen);
+    this.scene.add(this.axes);
+    // raycaster for selection
+    this.ray = new THREE.Raycaster();
+    canvas.addEventListener('click', e => this.onClick(e));
+    // orbit controls (basic implementation)
+    this.installControls(canvas);
+    this.onResize();
+    window.addEventListener('resize', () => this.onResize());
+    const tick = () => {
+      requestAnimationFrame(tick);
+      if (this.autoRot) this.azimuth += 0.004;
+      this.updateCam();
+      this.renderer.render(this.scene, this.camera);
+      this.updateAxisLabels();
+    };
+    tick();
+  },
+  updateAxisLabels() {
+    const wrap = document.getElementById('viewer-wrap');
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    const lX = document.getElementById('axL_X');
+    const lY = document.getElementById('axL_Y');
+    const lZ = document.getElementById('axL_Z');
+    const lO = document.getElementById('axL_O');
+    const visible = this.axes && this.axes.visible;
+    [lX,lY,lZ,lO].forEach(el => { if (el) el.style.display = visible ? 'block' : 'none'; });
+    if (!visible) return;
+    const L = this.axisLen || 2.5;
+    const pts = [
+      { el: lX, v: new THREE.Vector3(L*1.08, 0, 0) },
+      { el: lY, v: new THREE.Vector3(0, L*1.08, 0) },
+      { el: lZ, v: new THREE.Vector3(0, 0, L*1.08) },
+      { el: lO, v: new THREE.Vector3(0, 0, 0) }
+    ];
+    for (const p of pts) {
+      const v = p.v.clone().project(this.camera);
+      // hide labels that are behind the camera or off-screen
+      const onScreen = v.z < 1 && v.x > -1.05 && v.x < 1.05 && v.y > -1.05 && v.y < 1.05;
+      p.el.style.opacity = onScreen ? (p.el.id === 'axL_O' ? '0.6' : '1') : '0';
+      const sx = (v.x * 0.5 + 0.5) * w;
+      const sy = (-v.y * 0.5 + 0.5) * h;
+      p.el.style.left = sx + 'px';
+      p.el.style.top  = sy + 'px';
+    }
+  },
+  applyTheme() {
+    const cs = getComputedStyle(document.body);
+    const bg = cs.getPropertyValue('--bg-deep').trim();
+    this.renderer.setClearColor(new THREE.Color(bg), 1);
+  },
+  onResize() {
+    const wrap = document.getElementById('viewer-wrap');
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w/h;
+    this.camera.updateProjectionMatrix();
+  },
+  installControls(canvas) {
+    // simple polar orbit + pan + zoom
+    this.target = new THREE.Vector3(0,0,1.0);
+    this.azimuth = -Math.PI*0.45;
+    this.polar = Math.PI*0.42;
+    this.dist = 18;
+    this.tool = 'orbit';
+    let isDown=false, lastX=0, lastY=0, mode='orbit';
+    canvas.addEventListener('mousedown', e => {
+      isDown=true; lastX=e.clientX; lastY=e.clientY;
+      mode = (this.tool==='pan'||e.shiftKey) ? 'pan' :
+             (this.tool==='zoom') ? 'zoom' : 'orbit';
+    });
+    window.addEventListener('mousemove', e => {
+      if (!isDown) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      if (mode==='orbit') {
+        this.azimuth -= dx * 0.005;
+        this.polar = Math.max(0.05, Math.min(Math.PI - 0.05, this.polar - dy * 0.005));
+      } else if (mode==='pan') {
+        const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 0);
+        const up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 1);
+        const factor = this.dist * 0.0015;
+        this.target.addScaledVector(right, -dx*factor);
+        this.target.addScaledVector(up, dy*factor);
+      } else if (mode==='zoom') {
+        this.dist = Math.max(0.5, this.dist * (1 + dy*0.005));
+      }
+    });
+    window.addEventListener('mouseup', () => isDown=false);
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      this.dist = Math.max(0.5, this.dist * (1 + e.deltaY*0.001));
+    }, { passive:false });
+  },
+  updateCam() {
+    const x = this.target.x + this.dist * Math.sin(this.polar) * Math.cos(this.azimuth);
+    const y = this.target.y + this.dist * Math.sin(this.polar) * Math.sin(this.azimuth);
+    const z = this.target.z + this.dist * Math.cos(this.polar);
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(this.target);
+  },
+  resetView() {
+    if (STATE.parsed && STATE.parsed.domain) {
+      const d = STATE.parsed.domain;
+      this.target.set((d.min.x+d.max.x)/2, (d.min.y+d.max.y)/2, (d.min.z+d.max.z)/2 * 0.4);
+      this.dist = Math.max(d.size.x, d.size.y, d.size.z) * 1.1;
+      // scale axis gnomon to ~10% of domain size
+      const L = Math.max(d.size.x, d.size.y, d.size.z) * 0.10;
+      this.axisLen = L;
+      if (this.axes) {
+        this.scene.remove(this.axes);
+        this.axes = makeAxes(L);
+        this.scene.add(this.axes);
+      }
+    } else {
+      this.target.set(1,0,0.6);
+      this.dist = 5;
+      this.axisLen = 2.5;
+    }
+    this.azimuth = -Math.PI*0.42;
+    this.polar = Math.PI*0.42;
+  },
+  setCam(preset) {
+    const t = this.target;
+    const d = this.dist;
+    if (preset==='front') { this.azimuth = 0;          this.polar = Math.PI/2; }
+    if (preset==='side')  { this.azimuth = Math.PI/2;  this.polar = Math.PI/2; }
+    if (preset==='top')   { this.azimuth = -Math.PI/2; this.polar = 0.01; }
+    if (preset==='iso')   { this.azimuth = -Math.PI*0.25; this.polar = Math.PI*0.35; }
+    if (preset==='persp') { this.azimuth = -Math.PI*0.42; this.polar = Math.PI*0.42; }
+  },
+  clear() {
+    Object.values(this.meshes).forEach(m => {
+      if (m.mesh) this.scene.remove(m.mesh);
+      if (m.edges) this.scene.remove(m.edges);
+      if (m.points) this.scene.remove(m.points);
+    });
+    this.meshes = {};
+    if (this.domainBox) { this.scene.remove(this.domainBox); this.domainBox=null; }
+    if (this.inletArrows) { this.scene.remove(this.inletArrows); this.inletArrows=null; }
+    if (this.ground) { this.scene.remove(this.ground); this.ground=null; }
+    if (this.refBox) { this.scene.remove(this.refBox); this.refBox=null; }
+  },
+  loadOBJ(obj) {
+    if (!obj) return;
+    const verts = obj.verts;
+    const groupNames = Object.keys(obj.groups).filter(n => obj.groups[n].faces && obj.groups[n].faces.length);
+    const N = Math.max(groupNames.length, 6);
+    // Distinct low-saturation hues, evenly spaced — golden-angle offset for visual variety.
+    const layerColor = (i) => {
+      const hue = (i * 360 / N + 17) % 360;
+      // alternate lightness slightly so neighbours don't blend
+      const lit = (i % 2 === 0) ? 62 : 56;
+      const sat = 22;
+      return { hue, sat, lit };
+    };
+    let i = 0;
+    for (const name of groupNames) {
+      const g = obj.groups[name];
+      const positions = new Float32Array(g.faces.length * 9);
+      let p = 0;
+      for (const f of g.faces) {
+        for (let k=0;k<3;k++) {
+          const v = verts[f[k]] || [0,0,0];
+          positions[p++] = v[0]; positions[p++] = v[1]; positions[p++] = v[2];
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.computeVertexNormals();
+      const { hue, sat, lit } = layerColor(i);
+      const threeColor = new THREE.Color().setHSL(hue/360, sat/100, lit/100);
+      const hexColor = '#' + threeColor.getHexString();
+      const mat = new THREE.MeshStandardMaterial({ color: threeColor, roughness:0.78, metalness:0.05, flatShading:false });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.userData = { groupName: name, vCount: g.faces.length*3, fCount: g.faces.length };
+      this.scene.add(mesh);
+      // edges
+      const edgesGeo = new THREE.EdgesGeometry(geo, 30);
+      const edges = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0x222222, transparent:true, opacity:0.5 }));
+      edges.visible = false;
+      this.scene.add(edges);
+      // points
+      const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: threeColor, size: 0.02 }));
+      pts.visible = false;
+      this.scene.add(pts);
+      this.meshes[name] = { mesh, edges, points: pts, color: hexColor, hidden: false, opacity: 1 };
+      i++;
+    }
+    this.applyDisplay();
+  },
+  setLayerColor(name, hex) {
+    const m = this.meshes[name];
+    if (!m) return;
+    const c = new THREE.Color(hex);
+    if (m.mesh && m.mesh.material) m.mesh.material.color.copy(c);
+    if (m.points && m.points.material) m.points.material.color.copy(c);
+    m.color = hex;
+  },
+  setLayerVisible(name, visible) {
+    const m = this.meshes[name];
+    if (!m) return;
+    m.hidden = !visible;
+    this.applyDisplay();
+  },
+  setLayerOpacity(name, value) {
+    // value in [0, 1]
+    const m = this.meshes[name];
+    if (!m) return;
+    m.opacity = Math.max(0, Math.min(1, value));
+    if (m.mesh && m.mesh.material) {
+      m.mesh.material.transparent = m.opacity < 1;
+      m.mesh.material.opacity = m.opacity;
+      m.mesh.material.depthWrite = m.opacity >= 0.99;
+      m.mesh.material.needsUpdate = true;
+    }
+    if (m.edges && m.edges.material) {
+      m.edges.material.transparent = true;
+      m.edges.material.opacity = 0.5 * m.opacity;
+    }
+    if (m.points && m.points.material) {
+      m.points.material.transparent = m.opacity < 1;
+      m.points.material.opacity = m.opacity;
+    }
+  },
+  applyDisplay() {
+    const mode = this.displayMode;
+    Object.values(this.meshes).forEach(m => {
+      const live = !m.hidden;
+      if (mode==='solid')   { m.mesh.visible=live;  m.edges.visible=false;       m.points.visible=false; }
+      if (mode==='wire')    { m.mesh.visible=false; m.edges.visible=live;        m.points.visible=false; }
+      if (mode==='points')  { m.mesh.visible=false; m.edges.visible=false;       m.points.visible=live; }
+      if (mode==='overlay') { m.mesh.visible=live;  m.edges.visible=live;        m.points.visible=false; }
+    });
+  },
+  drawDomain(domain) {
+    if (this.domainBox) this.scene.remove(this.domainBox);
+    if (!domain) return;
+    const g = new THREE.BoxGeometry(domain.size.x, domain.size.y, domain.size.z);
+    const e = new THREE.EdgesGeometry(g);
+    const cs = getComputedStyle(document.body);
+    const lineColor = new THREE.Color(cs.getPropertyValue('--text').trim());
+    const m = new THREE.LineSegments(e, new THREE.LineBasicMaterial({ color: lineColor, transparent:true, opacity:0.5 }));
+    m.position.set(
+      (domain.min.x + domain.max.x)/2,
+      (domain.min.y + domain.max.y)/2,
+      (domain.min.z + domain.max.z)/2
+    );
+    this.scene.add(m);
+    this.domainBox = m;
+  },
+  drawInletArrows(domain, U) {
+    if (this.inletArrows) this.scene.remove(this.inletArrows);
+    if (!domain || !U) return;
+    const grp = new THREE.Group();
+    const dir = new THREE.Vector3(U[0],U[1],U[2]).normalize();
+    const len = Math.max(domain.size.x, domain.size.y, domain.size.z) * 0.07;
+    const cs = getComputedStyle(document.body);
+    const color = new THREE.Color(cs.getPropertyValue('--text').trim());
+    const ny = 4, nz = 3;
+    for (let iy=0; iy<ny; iy++) for (let iz=0; iz<nz; iz++) {
+      const y = domain.min.y + (iy+0.5) * domain.size.y / ny;
+      const z = domain.min.z + (iz+0.5) * domain.size.z / nz;
+      const ah = new THREE.ArrowHelper(dir, new THREE.Vector3(domain.min.x - len*0.2, y, z), len, color.getHex(), len*0.25, len*0.15);
+      grp.add(ah);
+    }
+    this.scene.add(grp);
+    this.inletArrows = grp;
+  },
+  drawGround(domain) {
+    if (this.ground) this.scene.remove(this.ground);
+    if (!domain) return;
+    const g = new THREE.PlaneGeometry(domain.size.x, domain.size.y, 1,1);
+    const cs = getComputedStyle(document.body);
+    const color = new THREE.Color(cs.getPropertyValue('--bg-alt').trim());
+    const mat = new THREE.MeshBasicMaterial({ color, transparent:true, opacity:0.3, side: THREE.DoubleSide });
+    const m = new THREE.Mesh(g, mat);
+    m.position.set((domain.min.x+domain.max.x)/2, (domain.min.y+domain.max.y)/2, domain.min.z);
+    this.scene.add(m);
+    this.ground = m;
+  },
+  drawRefBox(rb) {
+    if (this.refBox) this.scene.remove(this.refBox);
+    if (!rb) return;
+    const sx = rb.max.x-rb.min.x, sy = rb.max.y-rb.min.y, sz = rb.max.z-rb.min.z;
+    const g = new THREE.BoxGeometry(sx, sy, sz);
+    const e = new THREE.EdgesGeometry(g);
+    const cs = getComputedStyle(document.body);
+    const c = new THREE.Color(cs.getPropertyValue('--text').trim());
+    const mat = new THREE.LineDashedMaterial({ color:c, dashSize:0.3, gapSize:0.15, transparent:true, opacity:0.7 });
+    const m = new THREE.LineSegments(e, mat);
+    m.computeLineDistances();
+    m.position.set((rb.min.x+rb.max.x)/2, (rb.min.y+rb.max.y)/2, (rb.min.z+rb.max.z)/2);
+    this.scene.add(m);
+    this.refBox = m;
+  },
+  setSelected(name) {
+    this.selected = name;
+    Object.entries(this.meshes).forEach(([n, m]) => {
+      m.mesh.material.emissive = new THREE.Color(0x000000);
+    });
+    if (name && this.meshes[name]) {
+      this.meshes[name].mesh.material.emissive = new THREE.Color(0x444444);
+    }
+    document.querySelectorAll('.geom-row').forEach(r => r.classList.toggle('selected', r.dataset.name===name));
+    refreshSelectionPanel();
+  },
+  onClick(e) {
+    const wrap = document.getElementById('viewer-wrap');
+    const rect = wrap.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left)/rect.width)*2 - 1;
+    const my = -((e.clientY - rect.top)/rect.height)*2 + 1;
+    this.ray.setFromCamera({ x: mx, y: my }, this.camera);
+    const targets = Object.values(this.meshes).filter(m => m.mesh.visible).map(m => m.mesh);
+    const hits = this.ray.intersectObjects(targets, false);
+    if (hits.length) this.setSelected(hits[0].object.userData.groupName);
+  }
+};
+
+function makeAxes(L) {
+  const grp = new THREE.Group();
+  const mkLine = (a,b,col) => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+    return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, linewidth:2 }));
+  };
+  // distinct cool-low-saturation colors so each axis is visually identifiable
+  const xLine = mkLine([0,0,0],[L,0,0], 0xc06060);  // X red-ish
+  const yLine = mkLine([0,0,0],[0,L,0], 0x60c060);  // Y green-ish
+  const zLine = mkLine([0,0,0],[0,0,L], 0x6080c0);  // Z blue-ish
+  xLine.userData.axis = 'X'; yLine.userData.axis = 'Y'; zLine.userData.axis = 'Z';
+  grp.add(xLine); grp.add(yLine); grp.add(zLine);
+  return grp;
+}
+
+// hook tool / display / camera buttons
+document.querySelectorAll('.viewer-toolbar [data-tool]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.viewer-toolbar [data-tool]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  Viewer.tool = b.dataset.tool;
+}));
+document.querySelectorAll('.viewer-toolbar [data-cam]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.viewer-toolbar [data-cam]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  Viewer.setCam(b.dataset.cam);
+}));
+document.querySelectorAll('.viewer-toolbar [data-disp]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.viewer-toolbar [data-disp]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  Viewer.displayMode = b.dataset.disp;
+  Viewer.applyDisplay();
+}));
+document.getElementById('btnAutoRot').addEventListener('click', () => {
+  Viewer.autoRot = !Viewer.autoRot;
+  document.getElementById('btnAutoRot').classList.toggle('active', Viewer.autoRot);
+});
+document.getElementById('btnReset3D').addEventListener('click', () => Viewer.resetView());
+document.getElementById('btnAxes').addEventListener('click', () => {
+  Viewer.axes.visible = !Viewer.axes.visible;
+  document.getElementById('btnAxes').classList.toggle('active', Viewer.axes.visible);
+  document.getElementById('btnAxes').textContent = Viewer.axes.visible ? 'Axes ON' : 'Axes OFF';
+});
+document.getElementById('dShowDom').addEventListener('click', () => toggleObj('domainBox','dShowDom'));
+document.getElementById('dShowInlet').addEventListener('click', () => toggleObj('inletArrows','dShowInlet'));
+document.getElementById('dShowGround').addEventListener('click', () => toggleObj('ground','dShowGround'));
+document.getElementById('dShowRefBox').addEventListener('click', () => toggleObj('refBox','dShowRefBox'));
+
+function toggleObj(prop, btnId) {
+  if (Viewer[prop]) {
+    Viewer[prop].visible = !Viewer[prop].visible;
+    document.getElementById(btnId).classList.toggle('active', Viewer[prop].visible);
+  }
+}
+
+// init three viewer once libs are loaded
+window.addEventListener('load', () => {
+  if (typeof THREE !== 'undefined') Viewer.init();
+  else log('three.js failed to load','err');
+});
+
+/* ===================== UI refresh ===================== */
+function refreshUI() {
+  const p = STATE.parsed || {};
+  // strip 0
+  document.getElementById('zipNameTop').textContent = STATE.caseName;
+  document.getElementById('zipTimeTop').textContent = STATE.uploadedAt ? STATE.uploadedAt.toLocaleString('en-GB',{hour12:false}) : '—';
+  document.getElementById('activeCase').textContent = STATE.caseName;
+
+  // geometry tree
+  const tree = document.getElementById('geomTree');
+  tree.innerHTML = '';
+  if (STATE.obj) {
+    const groups = Object.entries(STATE.obj.groups).filter(([_,g])=>g.faces && g.faces.length);
+    groups.sort((a,b)=>b[1].faces.length-a[1].faces.length);
+
+    // bulk controls
+    const bulk = document.createElement('div');
+    bulk.className = 'layer-bulk';
+    const bShow = document.createElement('button'); bShow.textContent = 'Show All';
+    const bHide = document.createElement('button'); bHide.textContent = 'Hide All';
+    const bSolid= document.createElement('button'); bSolid.textContent = '100%';
+    bulk.appendChild(bShow); bulk.appendChild(bHide); bulk.appendChild(bSolid);
+    tree.appendChild(bulk);
+
+    const rowsByName = {};
+    groups.forEach(([name, g]) => {
+      const row = document.createElement('div');
+      row.className = 'geom-row';
+      row.dataset.name = name;
+      rowsByName[name] = row;
+
+      // visibility toggle
+      const eye = document.createElement('button');
+      eye.className = 'geom-eye';
+      eye.dataset.vis = '1';
+      eye.title = 'show / hide layer';
+      eye.textContent = 'visible';
+      eye.addEventListener('click', e => {
+        e.stopPropagation();
+        const newVis = eye.dataset.vis !== '1';
+        eye.dataset.vis = newVis ? '1' : '0';
+        row.classList.toggle('hidden', !newVis);
+        Viewer.setLayerVisible(name, newVis);
+      });
+
+      // color picker
+      const initHex = Viewer.meshes[name] ? Viewer.meshes[name].color : '#888888';
+      const swatch = document.createElement('input');
+      swatch.type = 'color';
+      swatch.className = 'geom-swatch';
+      swatch.value = initHex;
+      swatch.title = 'layer color';
+      swatch.addEventListener('click', e => e.stopPropagation());
+      swatch.addEventListener('input', e => Viewer.setLayerColor(name, e.target.value));
+
+      // name
+      const nm = document.createElement('span');
+      nm.className = 'geom-name'; nm.textContent = name; nm.title = name;
+
+      // opacity slider
+      const op = document.createElement('input');
+      op.type = 'range';
+      op.className = 'geom-opacity';
+      op.min = '0'; op.max = '100'; op.value = '100'; op.step = '1';
+      op.title = 'opacity 100%';
+      op.addEventListener('click', e => e.stopPropagation());
+      op.addEventListener('input', e => {
+        const v = parseInt(e.target.value, 10);
+        op.title = `opacity ${v}%`;
+        Viewer.setLayerOpacity(name, v / 100);
+      });
+
+      // face count
+      const ct = document.createElement('span');
+      ct.className = 'geom-count'; ct.textContent = g.faces.length + 'f';
+
+      row.appendChild(eye);
+      row.appendChild(swatch);
+      row.appendChild(nm);
+      row.appendChild(op);
+      row.appendChild(ct);
+      row.addEventListener('click', () => Viewer.setSelected(name));
+      tree.appendChild(row);
+    });
+
+    // bulk handlers
+    bShow.addEventListener('click', () => {
+      groups.forEach(([n]) => {
+        Viewer.setLayerVisible(n, true);
+        const r = rowsByName[n]; if (r) { r.classList.remove('hidden'); r.querySelector('.geom-eye').dataset.vis = '1'; }
+      });
+    });
+    bHide.addEventListener('click', () => {
+      groups.forEach(([n]) => {
+        Viewer.setLayerVisible(n, false);
+        const r = rowsByName[n]; if (r) { r.classList.add('hidden'); r.querySelector('.geom-eye').dataset.vis = '0'; }
+      });
+    });
+    bSolid.addEventListener('click', () => {
+      groups.forEach(([n]) => {
+        Viewer.setLayerOpacity(n, 1);
+        const r = rowsByName[n]; if (r) { const s = r.querySelector('.geom-opacity'); if (s) { s.value = '100'; s.title = 'opacity 100%'; } }
+      });
+    });
+  } else {
+    tree.innerHTML = '<div class="muted mono" style="font-size:10px;">No surface geometry parsed.</div>';
+  }
+
+  // viewer
+  Viewer.clear();
+  if (STATE.obj) Viewer.loadOBJ(STATE.obj);
+  if (p.domain) {
+    Viewer.drawDomain(p.domain);
+    Viewer.drawGround(p.domain);
+    Viewer.drawInletArrows(p.domain, p.flowVelocity || p.inletU || [1,0,0]);
+  }
+  if (p.refBox) Viewer.drawRefBox(p.refBox);
+  if (Viewer.refBox) Viewer.refBox.visible = false;
+  Viewer.resetView();
+
+  // scene props
+  let totalV = 0, totalT = 0, ng = 0;
+  Object.values(Viewer.meshes).forEach(m => {
+    totalV += m.mesh.userData.vCount; totalT += m.mesh.userData.fCount; ng++;
+  });
+  document.getElementById('pGroups').textContent = ng;
+  document.getElementById('pVerts').textContent = totalV.toLocaleString();
+  document.getElementById('pTris').textContent = totalT.toLocaleString();
+  if (p.domain) {
+    const d = p.domain;
+    document.getElementById('pBboxX').textContent = `${d.min.x.toFixed(2)} → ${d.max.x.toFixed(2)} m`;
+    document.getElementById('pBboxY').textContent = `${d.min.y.toFixed(2)} → ${d.max.y.toFixed(2)} m`;
+    document.getElementById('pBboxZ').textContent = `${d.min.z.toFixed(2)} → ${d.max.z.toFixed(2)} m`;
+  }
+
+  // strip 3 dashboards
+  drawPipeline(p);
+  drawModelsTable(p);
+  drawBcsTable(p);
+  drawParamsTable(p);
+  drawMeshTable(p);
+  drawAeroTable(p);
+}
+
+function refreshSelectionPanel() {
+  const sp = document.getElementById('selProps');
+  const name = Viewer.selected;
+  if (!name || !Viewer.meshes[name]) {
+    sp.innerHTML = '<dt>name</dt><dd>—</dd><dt>verts</dt><dd>—</dd><dt>tris</dt><dd>—</dd><dt>bbox</dt><dd>—</dd>';
+    return;
+  }
+  const m = Viewer.meshes[name];
+  m.mesh.geometry.computeBoundingBox();
+  const b = m.mesh.geometry.boundingBox;
+  sp.innerHTML = `
+    <dt>name</dt><dd>${name}</dd>
+    <dt>verts</dt><dd>${m.mesh.userData.vCount.toLocaleString()}</dd>
+    <dt>tris</dt><dd>${m.mesh.userData.fCount.toLocaleString()}</dd>
+    <dt>bbox X</dt><dd>${b.min.x.toFixed(3)} → ${b.max.x.toFixed(3)}</dd>
+    <dt>bbox Y</dt><dd>${b.min.y.toFixed(3)} → ${b.max.y.toFixed(3)}</dd>
+    <dt>bbox Z</dt><dd>${b.min.z.toFixed(3)} → ${b.max.z.toFixed(3)}</dd>
+    <dt>visible</dt><dd>${m.hidden ? 'no' : 'yes'}</dd>
+    <dt>opacity</dt><dd>${(m.opacity != null ? m.opacity : 1).toFixed(2)}</dd>
+    <dt>color</dt><dd><span style="display:inline-block;width:8px;height:8px;background:${m.color};border:1px solid var(--line);"></span> ${m.color}</dd>
+  `;
+}
+
+/* -------- dashboard drawers -------- */
+function drawPipeline(p) {
+  const el = document.getElementById('pipeline');
+  el.innerHTML = '';
+  const steps = [
+    { t:'01 GEOMETRY', h: STATE.obj ? `${Object.keys(STATE.obj.groups).length} groups` : '— no obj —', d:'.obj surface mesh' },
+    { t:'02 BLOCKMESH', h: p.cells ? `${p.cells.x}×${p.cells.y}×${p.cells.z}` : '—', d: p.domain ? `${p.domain.size.x}×${p.domain.size.y}×${p.domain.size.z} m` : '' },
+    { t:'03 SNAPPYHEXMESH', h: p.refSurface ? `Lvl ${p.refSurface.min}–${p.refSurface.max}` : '—', d: p.refRegion ? `wake lvl ${p.refRegion.level}` : '' },
+    { t:'04 RANS PRECURSOR', h: 'simpleFoam', d: p.rasModel ? p.rasModel : 'S-A · 500 iter' },
+    { t:'05 LES', h: p.lesApplication || 'pisoFoam', d: p.lesModel ? `${p.lesModel}, Δt=${p.lesDeltaT}s` : '' },
+    { t:'06 POST', h:'forceCoeffs', d:'cuttingPlane · streamLines' }
+  ];
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step';
+    div.innerHTML = `<div class="t">${s.t}</div><div class="h">${s.h}</div><div class="d">${s.d}</div>`;
+    el.appendChild(div);
+    if (i < steps.length-1) {
+      const a = document.createElement('div'); a.className='arrow'; a.textContent='▶';
+      el.appendChild(a);
+    }
+  });
+}
+
+function drawModelsTable(p) {
+  const t = document.getElementById('modelsTbl');
+  const rows = [
+    ['Sim Type', p.simulationType || '—'],
+    ['LES Model', p.lesModel || '—'],
+    ['LES Δ filter', p.lesDelta || '—'],
+    ['RAS Model', p.rasModel || '—'],
+    ['ddt Scheme', p.ddtScheme || '—'],
+    ['div(phi,U)', p.divU || '—'],
+    ['Laplacian', p.lapScheme || '—'],
+    ['Solver (LES)', p.lesApplication || p.application || '—'],
+    ['PISO correctors', p.nCorrectors!=null ? p.nCorrectors : '—'],
+    ['Decomp', p.decompMethod ? `${p.decompMethod} · ${p.nProcs||'?'} procs` : '—']
+  ];
+  t.innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+function drawBcsTable(p) {
+  const t = document.getElementById('bcsTbl');
+  if (!t) return;
+  // merge sources: prefer polyMesh boundary if present, then blockMesh, then U BCs.
+  const merged = new Map(); // name -> { type, uBC }
+  const adopt = (list) => {
+    if (!list) return;
+    for (const it of list) {
+      if (!merged.has(it.name)) merged.set(it.name, { type: it.type });
+      else merged.get(it.name).type = merged.get(it.name).type || it.type;
+    }
+  };
+  adopt(p.polyPatches);
+  adopt(p.bmPatches);
+  if (p.uBC) {
+    for (const [name, bc] of Object.entries(p.uBC)) {
+      // skip generated processor patches and the catch-all proc.* alias
+      if (/^proc/.test(name)) continue;
+      if (!merged.has(name)) merged.set(name, { type: '(snappy)' });
+      merged.get(name).uBC = bc;
+    }
+  }
+  if (!merged.size) {
+    t.innerHTML = '<tr><td class="muted" colspan="3">no patches found</td></tr>';
+    return;
+  }
+  // type → short label
+  const shortType = (s) => {
+    if (!s) return '—';
+    if (s === 'symmetryPlane' || s === 'symmetry') return 'sym';
+    if (s === 'patch') return 'patch';
+    if (s === 'wall') return 'wall';
+    if (s === 'empty') return 'empty';
+    if (s === 'cyclic') return 'cyclic';
+    if (s === 'processor') return 'proc';
+    return s;
+  };
+  // role hint
+  const role = (name, type, uBC) => {
+    if (/^inlet/i.test(name) || (uBC === 'fixedValue' && type === 'patch')) return 'inflow';
+    if (/^outlet/i.test(name) || uBC === 'inletOutlet' || uBC === 'zeroGradient') return 'outflow';
+    if (type === 'wall' || uBC === 'noSlip' || /Wall/i.test(name)) return 'wall';
+    if (shortType(type) === 'sym') return 'symmetry';
+    return '—';
+  };
+  const rows = [...merged.entries()].map(([name, v]) => ({
+    name, type: shortType(v.type), uBC: v.uBC || '—', role: role(name, v.type, v.uBC)
+  }));
+  // stable order: inlet, outlet, walls, symmetry, others
+  const orderKey = (r) => {
+    if (r.role === 'inflow') return 0;
+    if (r.role === 'outflow') return 1;
+    if (r.role === 'wall')   return 2;
+    if (r.role === 'symmetry') return 3;
+    return 4;
+  };
+  rows.sort((a,b) => orderKey(a) - orderKey(b) || a.name.localeCompare(b.name));
+  t.innerHTML =
+    '<tr><th>Patch</th><th>Type</th><th>U BC</th></tr>' +
+    rows.map(r => `<tr title="${r.role}"><td>${r.name}</td><td class="val">${r.type}</td><td class="val">${r.uBC}</td></tr>`).join('');
+}
+
+function drawDomainDiagrams(p) {
+  const el = document.getElementById('domainDiagrams');
+  if (!p.domain) { el.innerHTML = '<div class="muted mono" style="font-size:10px;">domain not parsed</div>'; return; }
+  const d = p.domain;
+  // Front view: y-z plane (looking down +X)
+  const W = 280, H = 130, mx = 14, my = 22;
+  const innerW = W - 2*mx, innerH = H - 2*my;
+  // Side view: x-z plane (looking down +Y)
+  function svgFront() {
+    const sx = innerW / d.size.y, sz = innerH / d.size.z;
+    const sc = Math.min(sx, sz);
+    const cx = W/2, cz = H - my;
+    const fx = v => cx + (v - (d.min.y+d.max.y)/2) * sc;
+    const fz = v => cz - (v - d.min.z) * sc;
+    const dx = d.size.y * sc, dy = d.size.z * sc;
+    const x0 = cx - dx/2, y0 = fz(d.max.z);
+    return `
+      <svg class="diag" viewBox="0 0 ${W} ${H}">
+        <text x="${mx}" y="12" class="cond upper" style="font-family:'Saira Condensed',sans-serif;letter-spacing:0.16em;">Front (looking +X)</text>
+        <rect class="domain" x="${x0}" y="${y0}" width="${dx}" height="${dy}"/>
+        <line class="axis" x1="${mx}" y1="${cz}" x2="${W-mx}" y2="${cz}"/>
+        <line class="axis" x1="${cx}" y1="${my}" x2="${cx}" y2="${H-2}"/>
+        <text x="${W-mx-8}" y="${cz-3}">Y →</text>
+        <text x="${cx+3}" y="${my+8}">Z ↑</text>
+        <text x="${x0-1}" y="${y0-2}">${d.size.y.toFixed(0)}m × ${d.size.z.toFixed(0)}m</text>
+        <!-- vehicle silhouette: simplified motorbike at origin -->
+        <ellipse class="veh" cx="${fx(0)}" cy="${fz(0.7)}" rx="${0.7*sc}" ry="${0.6*sc}"/>
+        <line class="dim" x1="${x0}" y1="${y0+dy+6}" x2="${x0+dx}" y2="${y0+dy+6}"/>
+        <text x="${x0+dx/2-12}" y="${y0+dy+14}">${d.size.y.toFixed(1)} m</text>
+      </svg>`;
+  }
+  function svgSide() {
+    const sx = innerW / d.size.x, sz = innerH / d.size.z;
+    const sc = Math.min(sx, sz);
+    const cx = W/2, cz = H - my;
+    const fx = v => cx + (v - (d.min.x+d.max.x)/2) * sc;
+    const fz = v => cz - (v - d.min.z) * sc;
+    const dx = d.size.x * sc, dy = d.size.z * sc;
+    const x0 = cx - dx/2, y0 = fz(d.max.z);
+    let refRect = '';
+    if (p.refBox) {
+      const rx = fx(p.refBox.min.x), ry = fz(p.refBox.max.z);
+      const rw = (p.refBox.max.x - p.refBox.min.x) * sc;
+      const rh = (p.refBox.max.z - p.refBox.min.z) * sc;
+      refRect = `<rect class="refbox" x="${rx}" y="${ry}" width="${rw}" height="${rh}"/>`;
+    }
+    return `
+      <svg class="diag" viewBox="0 0 ${W} ${H}">
+        <text x="${mx}" y="12" class="cond upper" style="font-family:'Saira Condensed',sans-serif;letter-spacing:0.16em;">Side (looking +Y)</text>
+        <rect class="domain" x="${x0}" y="${y0}" width="${dx}" height="${dy}"/>
+        ${refRect}
+        <line class="axis" x1="${mx}" y1="${cz}" x2="${W-mx}" y2="${cz}"/>
+        <text x="${W-mx-8}" y="${cz-3}">X →</text>
+        <text x="${fx(0)+3}" y="${my+8}">Z ↑</text>
+        <!-- inlet arrow -->
+        <line class="arrow" x1="${x0-8}" y1="${cz-dy*0.3}" x2="${x0-1}" y2="${cz-dy*0.3}"/>
+        <polygon class="arrow-head" points="${x0-1},${cz-dy*0.3-2} ${x0-1},${cz-dy*0.3+2} ${x0+2},${cz-dy*0.3}"/>
+        <text x="${x0-22}" y="${cz-dy*0.3-3}">U</text>
+        <!-- vehicle -->
+        <ellipse class="veh" cx="${fx(0)}" cy="${fz(0.7)}" rx="${1.0*sc}" ry="${0.5*sc}"/>
+        <circle class="veh" cx="${fx(-0.7)}" cy="${fz(0.3)}" r="${0.3*sc}"/>
+        <circle class="veh" cx="${fx(0.7)}" cy="${fz(0.3)}" r="${0.3*sc}"/>
+      </svg>`;
+  }
+  el.innerHTML = svgFront() + svgSide();
+}
+
+function drawParamsTable(p) {
+  const t = document.getElementById('paramsTbl');
+  const rows = [];
+  rows.push(['Inlet U_inf', p.Uref!=null?`${p.Uref.toFixed(2)} m/s`:'—']);
+  rows.push(['ν (kinematic)', p.nu!=null?`${p.nu.toExponential(2)} m²/s`:'—']);
+  rows.push(['Δt (LES)', p.lesDt!=null?`${p.lesDt} s`:'—']);
+  rows.push(['End time', p.lesEndTime!=null?`${p.lesEndTime} s`:'—']);
+  rows.push(['Write every', p.writeInterval!=null?`${p.writeInterval} steps`:'—']);
+  rows.push(['Base cell Δx', p.baseCell?`${p.baseCell.x.toFixed(3)} m`:'—']);
+  rows.push(['Cell @ wake (lvl '+(p.refRegion?p.refRegion.level:'?')+')', p.cellAtWake!=null?`${(p.cellAtWake*1000).toFixed(2)} mm`:'—']);
+  rows.push(['Cell @ surf (lvl '+(p.refSurface?p.refSurface.max:'?')+')', p.cellAtMax!=null?`${(p.cellAtMax*1000).toFixed(2)} mm`:'—']);
+  rows.push(['CFL @ wake', p.cflWake!=null?p.cflWake.toFixed(3):'—']);
+  rows.push(['CFL @ surface (worst)', p.cflSurface!=null?p.cflSurface.toFixed(3):'—']);
+  rows.push(['turbulent KE init', p.turbKE!=null?`${p.turbKE} m²/s²`:'—']);
+  t.innerHTML = `<tr><th>Quantity</th><th>Value</th></tr>` + rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+function drawMeshTable(p) {
+  const t = document.getElementById('meshTbl');
+  const rows = [];
+  if (p.cells) rows.push(['Base block (x,y,z)', `${p.cells.x} × ${p.cells.y} × ${p.cells.z}`]);
+  if (p.baseCell) rows.push(['Base cell size', `${p.baseCell.x.toFixed(2)} × ${p.baseCell.y.toFixed(2)} × ${p.baseCell.z.toFixed(2)} m`]);
+  if (p.refSurface) rows.push(['Surface refinement', `${p.refSurface.name} · level (${p.refSurface.min}, ${p.refSurface.max})`]);
+  if (p.refRegion)  rows.push(['Region refinement', `${p.refRegion.name} · level ${p.refRegion.level}`]);
+  if (p.refBox) {
+    rows.push(['RefBox min', `(${p.refBox.min.x}, ${p.refBox.min.y}, ${p.refBox.min.z}) m`]);
+    rows.push(['RefBox max', `(${p.refBox.max.x}, ${p.refBox.max.y}, ${p.refBox.max.z}) m`]);
+  }
+  if (p.maxGlobalCells) rows.push(['maxGlobalCells', p.maxGlobalCells.toExponential(2)]);
+  if (p.nProcs) rows.push(['Subdomains', `${p.nProcs} (${p.decompMethod||'?'})`]);
+  t.innerHTML = `<tr><th>Field</th><th>Value</th></tr>` + rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+function drawAeroTable(p) {
+  const t = document.getElementById('aeroTbl');
+  const rho = p.rhoInf!=null?p.rhoInf:1.225;
+  const rows = [
+    ['Air density ρ', `${rho.toFixed(3)} kg/m³ (incompressible)`],
+    ['Inlet velocity U∞', p.Uref!=null?`${p.Uref.toFixed(2)} m/s`:'—'],
+    ['Reference length L', p.lRef!=null?`${p.lRef} m`:'—'],
+    ['Reference area A', p.Aref!=null?`${p.Aref} m²`:'—'],
+    ['Reynolds number', p.Re!=null?p.Re.toExponential(2):'—'],
+    ['Mach (a≈340 m/s)', p.Uref!=null?(p.Uref/340).toFixed(3):'—'],
+    ['Drag direction', p.dragDir?`(${p.dragDir.join(' ')})`:'—'],
+    ['Lift direction', p.liftDir?`(${p.liftDir.join(' ')})`:'—'],
+    ['Pitch axis', p.pitchAxis?`(${p.pitchAxis.join(' ')})`:'—'],
+    ['Dynamic pressure ½ρU²', p.Uref!=null?`${(0.5*rho*p.Uref*p.Uref).toFixed(0)} Pa`:'—']
+  ];
+  t.innerHTML = `<tr><th>Quantity</th><th>Value</th></tr>` + rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+/* ===================== DEMO CASE ===================== */
+const DEMO = {
+  caseName: 'demo case',
+  parsed: {
+    application: 'simpleFoam',
+    lesApplication: 'pisoFoam',
+    nu: 1.5e-5,
+    deltaT: 1, endTime: 500,
+    lesDeltaT: 1e-4, lesEndTime: 1,
+    writeInterval: 1000,
+    simulationType: 'LES',
+    lesModel: 'SpalartAllmarasDDES',
+    lesDelta: 'cubeRootVol',
+    rasModel: 'SpalartAllmaras',
+    inletU: [100,0,0], flowVelocity:[100,0,0],
+    turbKE: 0.24, turbOmega: 1.78,
+    domain: {
+      min:{x:-12,y:-5,z:0}, max:{x:23,y:5,z:15},
+      size:{x:35,y:10,z:15}
+    },
+    cells: { x:35, y:10, z:15 },
+    refSurface: { name:'motorBike', min:9, max:10 },
+    refRegion: { name:'refinementBox', level:5 },
+    refBox: { min:{x:-1,y:-0.7,z:0}, max:{x:8,y:0.7,z:2.5} },
+    maxGlobalCells: 7e8,
+    nProcs: 16, decompMethod: 'ptscotch',
+    lRef: 1.42, Aref: 0.75, magUInf: 100, rhoInf: 1,
+    liftDir: [0,0,1], dragDir: [1,0,0], pitchAxis: [0,1,0],
+    ddtScheme: 'backward', divU: 'Gauss LUST unlimitedGrad(U)',
+    lapScheme: 'Gauss linear limited corrected 0.33',
+    nCorrectors: 3,
+    bmPatches: [
+      { name:'inlet',     type:'patch' },
+      { name:'outlet',    type:'patch' },
+      { name:'lowerWall', type:'wall' },
+      { name:'upperWall', type:'symmetryPlane' },
+      { name:'front',     type:'symmetryPlane' },
+      { name:'back',      type:'symmetryPlane' }
+    ],
+    uBC: {
+      inlet:'fixedValue', outlet:'inletOutlet',
+      lowerWall:'fixedValue', upperWall:'symmetryPlane',
+      front:'symmetryPlane', back:'symmetryPlane',
+      'motorBike_.*':'noSlip'
+    }
+  }
+};
+
+function loadDemo() {
+  // Try fetch first (works if served)
+  log('Loading demo case…');
+  fetch('./LES_RL9-10_v100ms.zip').then(r => {
+    if (!r.ok) throw new Error('not found');
+    return r.blob();
+  }).then(blob => {
+    const f = new File([blob], 'LES_RL9-10_v100ms.zip');
+    return loadZipFile(f, true);
+  }).catch(() => {
+    // fall back to metadata-only demo
+    log('Demo zip not co-located — loading metadata-only demo','warn');
+    STATE.caseName = DEMO.caseName;
+    STATE.uploadedAt = new Date();
+    STATE.parsed = JSON.parse(JSON.stringify(DEMO.parsed));
+    STATE.obj = null;
+    STATE.isDemo = true;
+    // derive
+    const p = STATE.parsed;
+    p.baseCell = { x: p.domain.size.x/p.cells.x, y: p.domain.size.y/p.cells.y, z: p.domain.size.z/p.cells.z };
+    p.cellAtMin = Math.min(p.baseCell.x,p.baseCell.y,p.baseCell.z) / 2**p.refSurface.min;
+    p.cellAtMax = Math.min(p.baseCell.x,p.baseCell.y,p.baseCell.z) / 2**p.refSurface.max;
+    p.cellAtWake = Math.min(p.baseCell.x,p.baseCell.y,p.baseCell.z) / 2**p.refRegion.level;
+    p.Uref = 100; p.Re = 100*1.42/1.5e-5;
+    p.lesDt = p.lesDeltaT;
+    p.cflWake = p.Uref*p.lesDt/p.cellAtWake;
+    p.cflSurface = p.Uref*p.lesDt/p.cellAtMax;
+    refreshUI();
+    log('Demo metadata loaded (drop the .zip for full geometry)','ok');
+  });
+}
+
+log('OCV ready · drop a .zip or click Load Demo', 'ok');
+
+</script>
+</body>
+</html>
