@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@300;400;500;600;700&family=Saira:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Saira+Condensed:wght@300;400;500;600;700&family=Saira:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #ffffff;
@@ -20,8 +20,10 @@
   --text-mute: #888;
   --accent: #111;
   --warn: #b04a00;
-  --ok: #2a6f2a;
+  --ok: #2a4a8a;
   --err: #a01818;
+  --accent-red: #c8102e;
+  --accent-red-dim: #a00d24;
   --layer-1: #b8b0a0;
   --layer-2: #a0a8b0;
   --layer-3: #b0a8b0;
@@ -41,8 +43,10 @@
   --text-mute: #777;
   --accent: #f0f0f0;
   --warn: #d97a3a;
-  --ok: #6fbf6f;
+  --ok: #88a8d8;
   --err: #d65c5c;
+  --accent-red: #e63948;
+  --accent-red-dim: #b71c1c;
   --layer-1: #6a6258;
   --layer-2: #5a6068;
   --layer-3: #645a64;
@@ -55,10 +59,20 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Saira', 'Saira Condensed', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.02em;
   height: 100%;
   overflow: hidden;
+}
+/* 4K big-screen scaling — bumps the entire UI proportionally */
+@media (min-width: 1920px) { html, body { font-size: 15px; } }
+@media (min-width: 2560px) {
+  html, body { font-size: 17px; }
+  body { grid-template-rows: 44px 46px 1fr 8px var(--s3h, 360px) 28px !important; }
+}
+@media (min-width: 3200px) {
+  html, body { font-size: 20px; }
+  body { grid-template-rows: 52px 54px 1fr 10px var(--s3h, 440px) 32px !important; }
 }
 body {
   display: grid;
@@ -91,8 +105,11 @@ button, input[type=file]::file-selector-button {
   border-radius: 0;
 }
 button:hover { background: var(--text); color: var(--bg); }
-button.active { background: var(--text); color: var(--bg); }
+button.active { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+button.active:hover { background: var(--accent-red-dim); border-color: var(--accent-red-dim); }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (min-width: 1920px) { button { font-size: 12px; padding: 5px 12px; } }
+@media (min-width: 2560px) { button { font-size: 13px; padding: 7px 14px; } }
 
 /* ===================== STRIP 0 ===================== */
 #strip0 {
@@ -106,13 +123,15 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 #strip0 .left { font-size: 11px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #strip0 .center {
-  font-family: 'Saira Condensed', sans-serif;
-  font-weight: 700;
-  letter-spacing: 0.4em;
-  font-size: 18px;
-  padding: 0 28px;
+  font-family: 'Russo One', 'Saira Condensed', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  font-size: clamp(20px, 1.3vw, 38px);
+  padding: 0 32px;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
+  color: var(--accent-red);
+  text-shadow: 0 0 0.5px var(--accent-red);
 }
 #strip0 .right { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
 .theme-toggle {
@@ -131,7 +150,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   justify-content: center;
   text-transform: uppercase;
 }
-.theme-toggle div.on { background: var(--text); color: var(--bg); }
+.theme-toggle div.on { background: var(--accent-red); color: #fff; }
 
 /* ===================== STRIP 1 ===================== */
 #strip1 {
@@ -202,7 +221,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   gap: 5px;
 }
 .geom-row:hover { background: var(--bg-alt); }
-.geom-row.selected { background: var(--text); color: var(--bg); }
+.geom-row.selected { background: var(--accent-red); color: #fff; }
 .geom-row.hidden .geom-name,
 .geom-row.hidden .geom-count { opacity: 0.35; text-decoration: line-through; }
 .geom-eye {
@@ -261,18 +280,22 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   padding: 2px 4px;
 }
 .geom-swatch {
-  width: 12px; height: 12px;
-  border: 1px solid var(--line);
+  width: 14px; height: 14px;
+  border: 1px solid var(--text-soft);
   padding: 0;
   background: none;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
   flex-shrink: 0;
+  transition: outline 0.1s ease;
 }
+.geom-swatch:hover { outline: 2px solid var(--accent-red); outline-offset: 1px; }
 .geom-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .geom-swatch::-webkit-color-swatch { border: none; }
 .geom-swatch::-moz-color-swatch { border: none; }
+@media (min-width: 1920px) { .geom-swatch { width: 16px; height: 16px; } }
+@media (min-width: 2560px) { .geom-swatch { width: 20px; height: 20px; } }
 .geom-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .geom-count { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-mute); }
 .geom-row.selected .geom-count { color: var(--bg); }
@@ -283,6 +306,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   background: var(--bg-deep);
   min-height: 0;
   overflow: hidden;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
 }
 #viewer-canvas { display: block; width: 100%; height: 100%; }
 .viewer-toolbar {
@@ -316,9 +342,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   z-index: 4;
   white-space: nowrap;
 }
-.axis-label.x { color: #d97a7a; }
-.axis-label.y { color: #7ad97a; }
-.axis-label.z { color: #7a9ad9; }
+/* monotone labels — keep them legible on both themes via inherited --text */
+.axis-label.x,
+.axis-label.y,
+.axis-label.z { color: var(--text); }
 .viewer-tooltip {
   position: absolute;
   bottom: 8px;
@@ -371,18 +398,19 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .dash h3 {
   font-family: 'Saira Condensed', sans-serif;
   font-weight: 600;
-  font-size: 10px;
+  font-size: clamp(10px, 0.6vw, 14px);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text);
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--text);
+  border-bottom: 2px solid var(--accent-red);
 }
 .dash h3 .num {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  color: var(--text-mute);
+  font-size: clamp(9px, 0.55vw, 13px);
+  color: var(--accent-red);
+  font-weight: 700;
   margin-right: 8px;
 }
 .s-workflow { grid-column: span 12; }
@@ -690,7 +718,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 0.0.2 · 04 MAY 2026 · branch from 0.0.1</div>
+  <div>Edition 0.0.3 · 04 MAY 2026 · 4K + auto-demo</div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -878,12 +906,14 @@ async function loadZipFile(file, isDemo) {
 }
 
 function resetAll() {
+  // 1. case state
   STATE.caseName = null;
   STATE.uploadedAt = null;
   STATE.files = {};
   STATE.parsed = null;
   STATE.obj = null;
   STATE.isDemo = false;
+  // 2. strips
   document.getElementById('zipNameTop').textContent = '— no file loaded —';
   document.getElementById('zipTimeTop').textContent = '—';
   document.getElementById('activeCase').textContent = 'none';
@@ -891,8 +921,42 @@ function resetAll() {
   document.getElementById('console').innerHTML = '';
   ['modelsTbl','paramsTbl','meshTbl','aeroTbl','bcsTbl'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   document.getElementById('pipeline').innerHTML = '';
+  // 3. layout — Strip 3 height back to default
+  document.body.style.removeProperty('--s3h');
+  // 4. theme back to dark default
+  document.body.dataset.theme = 'dark';
+  document.querySelectorAll('#themeToggle div').forEach(d => d.classList.toggle('on', d.dataset.mode === 'dark'));
+  // 5. viewer scene + camera + flags
   Viewer.clear();
-  log('Reset', 'ok');
+  Viewer.autoRot = false;
+  Viewer.tool = 'orbit';
+  Viewer.displayMode = 'solid';
+  Viewer.selected = null;
+  if (Viewer.axes) Viewer.axes.visible = true;
+  Viewer.resetView();
+  Viewer.applyTheme();
+  // 6. toolbar button states
+  const setActive = (sel, attr, val) => {
+    document.querySelectorAll(sel).forEach(b => b.classList.toggle('active', b.dataset[attr] === val));
+  };
+  setActive('.viewer-toolbar [data-tool]', 'tool', 'orbit');
+  setActive('.viewer-toolbar [data-cam]',  'cam',  'persp');
+  setActive('.viewer-toolbar [data-disp]', 'disp', 'solid');
+  const btnAR = document.getElementById('btnAutoRot');   if (btnAR) btnAR.classList.remove('active');
+  const btnAx = document.getElementById('btnAxes');
+  if (btnAx) { btnAx.classList.add('active'); btnAx.textContent = 'Axes ON'; }
+  // 7. display option toggles back to factory
+  const dDef = { dShowDom:true, dShowInlet:true, dShowGround:true, dShowGrid:false, dShowRefBox:false, dShowLayers:false };
+  for (const id in dDef) {
+    const b = document.getElementById(id); if (b) b.classList.toggle('active', dDef[id]);
+  }
+  // 8. selection panel
+  const sp = document.getElementById('selProps');
+  if (sp) sp.innerHTML = '<dt>name</dt><dd>—</dd><dt>verts</dt><dd>—</dd><dt>tris</dt><dd>—</dd><dt>bbox</dt><dd>—</dd>';
+  ['pGroups','pVerts','pTris','pBboxX','pBboxY','pBboxZ'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = id.startsWith('pBbox') ? '—' : '0';
+  });
+  log('Reset — defaults restored', 'ok');
 }
 
 function validate() {
@@ -1320,6 +1384,11 @@ const Viewer = {
     this.installControls(canvas);
     this.onResize();
     window.addEventListener('resize', () => this.onResize());
+    // catch every layout change — column drags, Strip 3 height drag, font reflow
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => this.onResize());
+      ro.observe(document.getElementById('viewer-wrap'));
+    }
     const tick = () => {
       requestAnimationFrame(tick);
       if (this.autoRot) this.azimuth += 0.004;
@@ -1383,6 +1452,12 @@ const Viewer = {
       isDown=true; lastX=e.clientX; lastY=e.clientY;
       mode = (this.tool==='pan'||e.shiftKey) ? 'pan' :
              (this.tool==='zoom') ? 'zoom' : 'orbit';
+      // cancel intro auto-rotate the moment the user grabs the canvas
+      if (this.autoRot) {
+        this.autoRot = false;
+        const btn = document.getElementById('btnAutoRot');
+        if (btn) btn.classList.remove('active');
+      }
     });
     window.addEventListener('mousemove', e => {
       if (!isDown) return;
@@ -1461,12 +1536,14 @@ const Viewer = {
     const verts = obj.verts;
     const groupNames = Object.keys(obj.groups).filter(n => obj.groups[n].faces && obj.groups[n].faces.length);
     const N = Math.max(groupNames.length, 6);
-    // Distinct low-saturation hues, evenly spaced — golden-angle offset for visual variety.
+    // Distinct, recognisably-coloured hues. Saturation kept moderate so the
+    // viewport still reads as engineering-monotone, but each layer is visibly
+    // different — this signals to the user that the swatch is interactive.
     const layerColor = (i) => {
-      const hue = (i * 360 / N + 17) % 360;
-      // alternate lightness slightly so neighbours don't blend
-      const lit = (i % 2 === 0) ? 62 : 56;
-      const sat = 22;
+      // golden-angle offset → max distinguishability among neighbours
+      const hue = (i * 137.508 + 27) % 360;
+      const lit = (i % 2 === 0) ? 62 : 54;
+      const sat = 48;
       return { hue, sat, lit };
     };
     let i = 0;
@@ -1638,10 +1715,13 @@ function makeAxes(L) {
     const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
     return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, linewidth:2 }));
   };
-  // distinct cool-low-saturation colors so each axis is visually identifiable
-  const xLine = mkLine([0,0,0],[L,0,0], 0xc06060);  // X red-ish
-  const yLine = mkLine([0,0,0],[0,L,0], 0x60c060);  // Y green-ish
-  const zLine = mkLine([0,0,0],[0,0,L], 0x6080c0);  // Z blue-ish
+  // monotone — pick a neutral mid-grey that reads on both light and dark themes
+  const cs = getComputedStyle(document.body);
+  const themed = cs.getPropertyValue('--text-soft').trim();
+  const axisColor = new THREE.Color(themed || '#9a9a9a');
+  const xLine = mkLine([0,0,0],[L,0,0], axisColor);
+  const yLine = mkLine([0,0,0],[0,L,0], axisColor);
+  const zLine = mkLine([0,0,0],[0,0,L], axisColor);
   xLine.userData.axis = 'X'; yLine.userData.axis = 'Y'; zLine.userData.axis = 'Z';
   grp.add(xLine); grp.add(yLine); grp.add(zLine);
   return grp;
@@ -1686,10 +1766,16 @@ function toggleObj(prop, btnId) {
   }
 }
 
-// init three viewer once libs are loaded
+// init three viewer once libs are loaded; then auto-load the demo case so a
+// first-time visitor sees the app working without clicking anything.
 window.addEventListener('load', () => {
-  if (typeof THREE !== 'undefined') Viewer.init();
-  else log('three.js failed to load','err');
+  if (typeof THREE === 'undefined') { log('three.js failed to load','err'); return; }
+  Viewer.init();
+  // give the renderer one frame to lay out, then kick off the demo
+  setTimeout(() => {
+    log('Auto-loading demo case so you can see what OCV does…', 'ok');
+    loadDemo();
+  }, 80);
 });
 
 /* ===================== UI refresh ===================== */
@@ -2137,6 +2223,13 @@ function loadDemo() {
   }).then(blob => {
     const f = new File([blob], 'LES_RL9-10_v100ms.zip');
     return loadZipFile(f, true);
+  }).then(() => {
+    // intro animation: auto-rotate so the user sees what the app does
+    if (Viewer.scene) {
+      Viewer.autoRot = true;
+      const btn = document.getElementById('btnAutoRot');
+      if (btn) btn.classList.add('active');
+    }
   }).catch(() => {
     // fall back to metadata-only demo
     log('Demo zip not co-located — loading metadata-only demo','warn');
