@@ -24,6 +24,10 @@
   --err: #a01818;
   --accent-red: #c8102e;
   --accent-red-dim: #a00d24;
+  --accent-cyan: #00b4d8;
+  --accent-cyan-dim: #007a99;
+  --glow-red: 0 0 10px rgba(200, 16, 46, 0.55);
+  --glow-cyan: 0 0 10px rgba(0, 180, 216, 0.5);
   --layer-1: #b8b0a0;
   --layer-2: #a0a8b0;
   --layer-3: #b0a8b0;
@@ -45,8 +49,12 @@
   --warn: #d97a3a;
   --ok: #88a8d8;
   --err: #d65c5c;
-  --accent-red: #e63948;
+  --accent-red: #ff2a44;
   --accent-red-dim: #b71c1c;
+  --accent-cyan: #00d9ff;
+  --accent-cyan-dim: #0099cc;
+  --glow-red: 0 0 16px rgba(255, 42, 68, 0.65), 0 0 2px rgba(255, 42, 68, 0.9);
+  --glow-cyan: 0 0 14px rgba(0, 217, 255, 0.55), 0 0 2px rgba(0, 217, 255, 0.85);
   --layer-1: #6a6258;
   --layer-2: #5a6068;
   --layer-3: #645a64;
@@ -55,6 +63,58 @@
   --layer-6: #586868;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== v2 cyberpunk + motorsport — global motion + scan overlay ===== */
+button, .geom-row, .toggle-row button, input[type=color], input[type=range],
+.theme-toggle, .theme-toggle div, .resizer, .hresize, #strip0 .center,
+.dash h3, .geom-swatch, .pipeline .step {
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease,
+              box-shadow 200ms ease, outline 120ms ease, transform 160ms ease,
+              opacity 160ms ease;
+}
+
+/* faint horizontal scanlines fixed over the entire UI — cyberpunk monitor feel */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.7;
+}
+[data-theme="light"] body::before, body[data-theme="light"]::before {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.018) 0px,
+    rgba(0, 0, 0, 0.018) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+}
+
+/* very subtle vignette glow behind the brand strip in dark mode */
+body[data-theme="dark"] #strip0 {
+  background:
+    radial-gradient(ellipse 60% 100% at 50% 0%, rgba(255, 42, 68, 0.10), transparent 60%),
+    var(--bg-alt);
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: var(--glow-red); }
+  50%      { box-shadow: 0 0 22px rgba(255, 42, 68, 0.85), 0 0 3px rgba(255, 42, 68, 1); }
+}
+@keyframes scan-x {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
 html, body {
   background: var(--bg);
   color: var(--text);
@@ -104,10 +164,29 @@ button, input[type=file]::file-selector-button {
   cursor: pointer;
   border-radius: 0;
 }
-button:hover { background: var(--text); color: var(--bg); }
-button.active { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
-button.active:hover { background: var(--accent-red-dim); border-color: var(--accent-red-dim); }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+button {
+  /* motorsport cut-corner silhouette */
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  position: relative;
+}
+button:hover {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-1px);
+}
+button.active {
+  background: var(--accent-red);
+  color: #fff;
+  border-color: var(--accent-red);
+  box-shadow: var(--glow-red);
+}
+button.active:hover {
+  background: var(--accent-red-dim);
+  border-color: var(--accent-red-dim);
+  box-shadow: var(--glow-red);
+}
+button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
 @media (min-width: 1920px) { button { font-size: 12px; padding: 5px 12px; } }
 @media (min-width: 2560px) { button { font-size: 13px; padding: 7px 14px; } }
 
@@ -122,7 +201,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   gap: 16px;
 }
 #strip0 .left { font-size: 11px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Brand mark — same family / size / color as a Strip-3 section header */
+/* Brand mark — same family / size / color as a Strip-3 section header,
+   with a v2 cyberpunk treatment: red glow + cyan scan-stripe + chevrons */
 #strip0 .center {
   font-family: 'Saira Condensed', sans-serif;
   font-weight: 600;
@@ -130,9 +210,35 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   font-size: clamp(10px, 0.6vw, 14px);
   text-transform: uppercase;
   color: var(--text);
-  padding: 4px 16px;
+  padding: 4px 22px;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
+  position: relative;
+  text-shadow: 0 0 6px rgba(255, 42, 68, 0.55), 0 0 1px rgba(255, 42, 68, 1);
+  overflow: hidden;
+}
+#strip0 .center::before,
+#strip0 .center::after {
+  content: "◤";
+  position: absolute;
+  color: var(--accent-red);
+  font-size: 0.7em;
+  letter-spacing: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  text-shadow: 0 0 6px var(--accent-red);
+}
+#strip0 .center::before { left: 4px; }
+#strip0 .center::after  { right: 4px; content: "◢"; }
+/* cyan scan-stripe sweeping through the brand mark */
+#strip0 .center > span.scan {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 30%;
+  left: 0;
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.18), transparent);
+  pointer-events: none;
+  animation: scan-x 4s linear infinite;
 }
 #strip0 .right { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
 .theme-toggle {
@@ -151,7 +257,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   justify-content: center;
   text-transform: uppercase;
 }
-.theme-toggle div.on { background: var(--accent-red); color: #fff; }
+.theme-toggle div.on { background: var(--accent-red); color: #fff; box-shadow: var(--glow-red); }
+.theme-toggle:hover { box-shadow: var(--glow-cyan); }
 
 /* ===================== STRIP 1 ===================== */
 #strip1 {
@@ -175,10 +282,31 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   color: var(--text-soft);
   overflow: hidden;
   white-space: nowrap;
+  position: relative;
+}
+#console::before {
+  /* small running cyan led on the left edge — telemetry feel */
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+  margin-right: 8px;
+  animation: pulse-led 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-led {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.05); }
 }
 #console .log-line { padding-right: 18px; }
+#console .log-line:first-child {
+  color: var(--text);
+  text-shadow: 0 0 6px rgba(0, 217, 255, 0.4);
+}
 #console .log-line.warn { color: var(--warn); }
-#console .log-line.err { color: var(--err); }
+#console .log-line.err { color: var(--err); text-shadow: 0 0 6px rgba(255, 0, 0, 0.5); }
 #console .log-line.ok { color: var(--ok); }
 .btn-row { display: flex; gap: 4px; }
 
@@ -204,10 +332,20 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-soft);
+  color: var(--accent-cyan);
   padding: 6px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--bg-alt);
+  position: relative;
+  text-shadow: 0 0 6px rgba(0, 217, 255, 0.35);
+}
+.col-head::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-cyan) 0, var(--accent-cyan) 30%, transparent 100%);
+  opacity: 0.5;
 }
 .col-body { padding: 8px 10px; flex: 1; min-height: 0; overflow: auto; }
 
@@ -234,13 +372,26 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   column-gap: 10px;
   row-gap: 2px;
   align-items: center;
-  padding: 12px 8px;
+  padding: 12px 12px 12px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--line-soft);
+  position: relative;
 }
+/* slide-in red bar on left edge — cyberpunk panel reveal */
+.geom-row::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: var(--accent-red);
+  box-shadow: var(--glow-red);
+  transition: width 180ms ease;
+}
+.geom-row:hover::before { width: 3px; }
+.geom-row.selected::before { width: 4px; box-shadow: var(--glow-red); }
 .geom-row:last-child { border-bottom: none; }
 .geom-row:hover { background: var(--bg-alt); }
-.geom-row.selected { background: var(--accent-red); color: #fff; }
+.geom-row.selected { background: var(--accent-red); color: #fff; box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.25), var(--glow-red); }
 .geom-row.hidden .geom-name,
 .geom-row.hidden .geom-meta { opacity: 0.35; text-decoration: line-through; }
 
@@ -362,6 +513,16 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   width: 100%;
   height: 100%;
 }
+/* faint cyan vignette pulse around the viewport edges */
+#viewer-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%),
+    radial-gradient(ellipse at center, transparent 80%, rgba(0, 217, 255, 0.05) 100%);
+}
 #viewer-canvas { display: block; width: 100%; height: 100%; }
 .viewer-toolbar {
   position: absolute;
@@ -377,7 +538,18 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .viewer-toolbar .group { display: flex; flex-direction: column; gap: 2px; }
 .viewer-toolbar .group + .group { border-top: 1px solid var(--line-soft); padding-top: 4px; margin-top: 2px; }
-.viewer-toolbar .lbl { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-mute); }
+.viewer-toolbar .lbl {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.4);
+}
+.viewer-toolbar .lbl::before { content: "» "; color: var(--accent-red); }
+.viewer-toolbar {
+  border: 1px solid var(--line);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 217, 255, 0.06);
+}
 .viewer-toolbar button { padding: 3px 6px; font-size: 9px; min-width: 60px; text-align: left; }
 .axis-label {
   position: absolute;
@@ -387,12 +559,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   color: var(--text);
   background: var(--bg-deep);
   padding: 1px 4px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--accent-cyan);
   pointer-events: none;
   letter-spacing: 0.06em;
   transform: translate(-50%, -50%);
   z-index: 4;
   white-space: nowrap;
+  box-shadow: 0 0 6px rgba(0, 217, 255, 0.4);
+  text-shadow: 0 0 4px rgba(0, 217, 255, 0.3);
 }
 /* monotone labels — keep them legible on both themes via inherited --text */
 .axis-label.x,
@@ -420,11 +594,17 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text);
+  color: var(--accent-cyan);
   border-bottom: 1px solid var(--line);
   padding-bottom: 3px;
   margin-bottom: 6px;
   font-weight: 600;
+  text-shadow: 0 0 6px rgba(0, 217, 255, 0.3);
+}
+.prop-section h4::before {
+  content: "▸ ";
+  color: var(--accent-red);
+  text-shadow: 0 0 4px var(--accent-red);
 }
 .toggle-row { display: flex; gap: 0; margin-bottom: 4px; }
 .toggle-row button { flex: 1; min-width: 0; }
@@ -455,15 +635,40 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   text-transform: uppercase;
   color: var(--text);
   margin-bottom: 8px;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   border-bottom: 2px solid var(--accent-red);
+  position: relative;
+  display: flex;
+  align-items: center;
 }
+/* race chevron before the section number */
+.dash h3::before {
+  content: "▶";
+  color: var(--accent-red);
+  font-size: 0.7em;
+  margin-right: 6px;
+  text-shadow: 0 0 6px var(--accent-red);
+}
+/* glowing cyan stripe sliding along the bottom edge on section hover */
+.dash h3::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  box-shadow: var(--glow-cyan);
+  transition: width 360ms ease;
+}
+.dash > section:hover h3::after { width: 100%; }
 .dash h3 .num {
   font-family: 'JetBrains Mono', monospace;
   font-size: clamp(9px, 0.55vw, 13px);
   color: var(--accent-red);
   font-weight: 700;
-  margin-right: 8px;
+  margin-right: 10px;
+  text-shadow: 0 0 6px rgba(255, 42, 68, 0.6);
 }
 .s-workflow { grid-column: span 12; }
 .s-models   { grid-column: span 4; }
@@ -507,6 +712,25 @@ table.kv tr.hl td { background: var(--bg-alt); }
   padding: 6px 10px;
   background: var(--bg-alt);
   position: relative;
+  /* motorsport cut top-right corner */
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+.pipeline .step::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-red), var(--accent-cyan));
+  opacity: 0.6;
+}
+.pipeline .step:hover {
+  background: var(--bg-deep);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-red);
+}
+.pipeline .arrow {
+  color: var(--accent-cyan);
+  text-shadow: var(--glow-cyan);
 }
 .pipeline .step + .step { margin-left: -1px; }
 .pipeline .step .t {
@@ -543,6 +767,19 @@ table.kv tr.hl td { background: var(--bg-alt); }
   background: var(--bg-alt);
   border-top: 1px solid var(--line);
   text-transform: uppercase;
+  position: relative;
+}
+#strip4::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--accent-red) 25%,
+    var(--accent-cyan) 75%,
+    transparent 100%);
+  opacity: 0.55;
 }
 
 /* drop overlay */
@@ -602,7 +839,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
     <span class="muted upper" style="margin-left:14px;">Uploaded ::</span>
     <span id="zipTimeTop" class="mono">—</span>
   </div>
-  <div class="center">PROJECT OCV</div>
+  <div class="center"><span class="scan"></span>PROJECT OCV</div>
   <div class="right">
     <span class="muted" style="font-size:9px;letter-spacing:0.16em;">THEME</span>
     <div class="theme-toggle" id="themeToggle">
@@ -769,7 +1006,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 1.0.0 · 04 MAY 2026 · first prototype</div>
+  <div>Edition 2.0.0 · 04 MAY 2026 · cyberpunk · motorsport</div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
