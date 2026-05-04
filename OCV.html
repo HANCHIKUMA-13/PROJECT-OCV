@@ -122,16 +122,17 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   gap: 16px;
 }
 #strip0 .left { font-size: 11px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Brand mark — same family / size / color as a Strip-3 section header */
 #strip0 .center {
-  font-family: 'Russo One', 'Saira Condensed', sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.32em;
-  font-size: clamp(20px, 1.3vw, 38px);
-  padding: 0 32px;
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  font-size: clamp(10px, 0.6vw, 14px);
+  text-transform: uppercase;
+  color: var(--text);
+  padding: 4px 16px;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
-  color: var(--accent-red);
-  text-shadow: 0 0 0.5px var(--accent-red);
 }
 #strip0 .right { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
 .theme-toggle {
@@ -210,23 +211,42 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .col-body { padding: 8px 10px; flex: 1; min-height: 0; overflow: auto; }
 
-/* geometry tree */
-.geom-tree { font-size: 11px; }
+/* === Geometry / Layers panel — redesigned for legibility === */
+.geom-tree { font-size: 13px; }
+.layer-bulk {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.layer-bulk button {
+  flex: 1;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 5px 6px;
+}
+
 .geom-row {
   display: grid;
-  grid-template-columns: 14px 14px 1fr 52px auto;
+  grid-template-columns: 16px 18px 1fr 64px;
+  column-gap: 10px;
+  row-gap: 1px;
   align-items: center;
-  padding: 3px 2px;
+  padding: 8px 6px;
   cursor: pointer;
-  gap: 5px;
+  border-bottom: 1px solid var(--line-soft);
 }
+.geom-row:last-child { border-bottom: none; }
 .geom-row:hover { background: var(--bg-alt); }
 .geom-row.selected { background: var(--accent-red); color: #fff; }
 .geom-row.hidden .geom-name,
-.geom-row.hidden .geom-count { opacity: 0.35; text-decoration: line-through; }
+.geom-row.hidden .geom-meta { opacity: 0.35; text-decoration: line-through; }
+
 .geom-eye {
-  width: 12px;
-  height: 12px;
+  grid-row: 1 / span 2;
+  width: 14px;
+  height: 14px;
   padding: 0;
   border: 1px solid var(--line);
   background: var(--text);
@@ -236,51 +256,12 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   overflow: hidden;
 }
 .geom-eye[data-vis="0"] { background: transparent; }
-.geom-row.selected .geom-eye { border-color: var(--bg); }
-.geom-row.selected .geom-eye[data-vis="1"] { background: var(--bg); }
-.geom-opacity {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  background: var(--line);
-  cursor: pointer;
-  margin: 0;
-  padding: 0;
-}
-.geom-opacity::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 8px;
-  height: 12px;
-  background: var(--text);
-  border: 1px solid var(--bg);
-  cursor: pointer;
-  border-radius: 0;
-}
-.geom-opacity::-moz-range-thumb {
-  width: 8px;
-  height: 12px;
-  background: var(--text);
-  border: 1px solid var(--bg);
-  cursor: pointer;
-  border-radius: 0;
-}
-.geom-row.selected .geom-opacity { background: var(--bg-deep); }
-.geom-row.selected .geom-opacity::-webkit-slider-thumb { background: var(--bg); border-color: var(--text); }
-.layer-bulk {
-  display: flex;
-  gap: 4px;
-  padding: 4px 0 6px;
-  border-bottom: 1px solid var(--line-soft);
-  margin-bottom: 4px;
-}
-.layer-bulk button {
-  flex: 1;
-  font-size: 9px;
-  padding: 2px 4px;
-}
+.geom-row.selected .geom-eye { border-color: #fff; }
+.geom-row.selected .geom-eye[data-vis="1"] { background: #fff; }
+
 .geom-swatch {
-  width: 14px; height: 14px;
+  grid-row: 1 / span 2;
+  width: 18px; height: 18px;
   border: 1px solid var(--text-soft);
   padding: 0;
   background: none;
@@ -294,11 +275,77 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geom-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .geom-swatch::-webkit-color-swatch { border: none; }
 .geom-swatch::-moz-color-swatch { border: none; }
-@media (min-width: 1920px) { .geom-swatch { width: 16px; height: 16px; } }
-@media (min-width: 2560px) { .geom-swatch { width: 20px; height: 20px; } }
-.geom-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.geom-count { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-mute); }
-.geom-row.selected .geom-count { color: var(--bg); }
+
+.geom-name {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+.geom-meta {
+  grid-column: 3;
+  grid-row: 2;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0;
+}
+.geom-row.selected .geom-meta { color: rgba(255,255,255,0.85); }
+
+.geom-opacity {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+.geom-opacity::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 16px;
+  background: var(--text);
+  border: 1px solid var(--bg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.geom-opacity::-moz-range-thumb {
+  width: 10px;
+  height: 16px;
+  background: var(--text);
+  border: 1px solid var(--bg);
+  cursor: pointer;
+  border-radius: 0;
+}
+.geom-row.selected .geom-opacity { background: rgba(0,0,0,0.4); }
+.geom-row.selected .geom-opacity::-webkit-slider-thumb { background: #fff; border-color: var(--accent-red); }
+
+@media (min-width: 1920px) {
+  .geom-tree { font-size: 14px; }
+  .geom-name { font-size: 14px; }
+  .geom-meta { font-size: 11px; }
+  .geom-swatch { width: 22px; height: 22px; }
+  .geom-eye   { width: 16px; height: 16px; }
+}
+@media (min-width: 2560px) {
+  .geom-tree { font-size: 16px; }
+  .geom-name { font-size: 16px; }
+  .geom-meta { font-size: 12px; }
+  .geom-swatch { width: 26px; height: 26px; }
+  .geom-eye   { width: 20px; height: 20px; }
+  .geom-opacity { height: 8px; }
+}
 
 /* viewer */
 #viewer-wrap {
@@ -550,7 +597,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
     <span class="muted upper" style="margin-left:14px;">Uploaded ::</span>
     <span id="zipTimeTop" class="mono">—</span>
   </div>
-  <div class="center">OCV</div>
+  <div class="center">PROJECT OCV</div>
   <div class="right">
     <span class="muted" style="font-size:9px;letter-spacing:0.16em;">THEME</span>
     <div class="theme-toggle" id="themeToggle">
@@ -718,7 +765,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 0.0.3 · 04 MAY 2026 · 4K + auto-demo</div>
+  <div>Edition 0.0.4 · 04 MAY 2026 · brand + layer panel</div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -1534,7 +1581,12 @@ const Viewer = {
   loadOBJ(obj) {
     if (!obj) return;
     const verts = obj.verts;
-    const groupNames = Object.keys(obj.groups).filter(n => obj.groups[n].faces && obj.groups[n].faces.length);
+    // sort by face count descending so the largest layer (the "main body")
+    // gets the first palette slot — which is reserved as a neutral grey.
+    const groupNames = Object.entries(obj.groups)
+      .filter(([_, g]) => g.faces && g.faces.length)
+      .sort((a, b) => b[1].faces.length - a[1].faces.length)
+      .map(([n]) => n);
     const N = Math.max(groupNames.length, 6);
     // Curated non-green palette. The green band 70°–170° is excluded entirely
     // per the design rule. Saturation kept moderate so the viewport still
@@ -1553,7 +1605,13 @@ const Viewer = {
       { hue: 290, sat: 30, lit: 58 },  // muted purple
       { hue:  20, sat: 30, lit: 50 }   // rust
     ];
-    const layerColor = (i) => NON_GREEN_PALETTE[i % NON_GREEN_PALETTE.length];
+    // Layer names that read as the "main body" of the model. These default
+    // to a neutral grey so the eye-catching colors on the rest stand out.
+    const NEUTRAL_NAMES = /^(fairing|body|main|chassis|hull|shell|frame)$/i;
+    const layerColor = (i, name) => {
+      if (name && NEUTRAL_NAMES.test(name)) return { hue: 0, sat: 0, lit: 48 }; // #7a7a7a
+      return NON_GREEN_PALETTE[i % NON_GREEN_PALETTE.length];
+    };
     let i = 0;
     for (const name of groupNames) {
       const g = obj.groups[name];
@@ -1568,7 +1626,7 @@ const Viewer = {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geo.computeVertexNormals();
-      const { hue, sat, lit } = layerColor(i);
+      const { hue, sat, lit } = layerColor(i, name);
       const threeColor = new THREE.Color().setHSL(hue/360, sat/100, lit/100);
       const hexColor = '#' + threeColor.getHexString();
       const mat = new THREE.MeshStandardMaterial({ color: threeColor, roughness:0.78, metalness:0.05, flatShading:false });
@@ -1837,13 +1895,23 @@ function refreshUI() {
       swatch.type = 'color';
       swatch.className = 'geom-swatch';
       swatch.value = initHex;
-      swatch.title = 'layer color';
+      swatch.title = 'layer color — click to change';
       swatch.addEventListener('click', e => e.stopPropagation());
-      swatch.addEventListener('input', e => Viewer.setLayerColor(name, e.target.value));
 
-      // name
+      // name + meta (hex · face count)
       const nm = document.createElement('span');
       nm.className = 'geom-name'; nm.textContent = name; nm.title = name;
+      const meta = document.createElement('span');
+      meta.className = 'geom-meta';
+      const formatFaces = n => n >= 1000 ? n.toLocaleString() : String(n);
+      const setMeta = (hex) => { meta.textContent = `${hex.toLowerCase()}  ·  ${formatFaces(g.faces.length)} faces`; };
+      setMeta(initHex);
+
+      swatch.addEventListener('input', e => {
+        const hex = e.target.value;
+        Viewer.setLayerColor(name, hex);
+        setMeta(hex);
+      });
 
       // opacity slider
       const op = document.createElement('input');
@@ -1858,15 +1926,11 @@ function refreshUI() {
         Viewer.setLayerOpacity(name, v / 100);
       });
 
-      // face count
-      const ct = document.createElement('span');
-      ct.className = 'geom-count'; ct.textContent = g.faces.length + 'f';
-
       row.appendChild(eye);
       row.appendChild(swatch);
       row.appendChild(nm);
+      row.appendChild(meta);
       row.appendChild(op);
-      row.appendChild(ct);
       row.addEventListener('click', () => Viewer.setSelected(name));
       tree.appendChild(row);
     });
