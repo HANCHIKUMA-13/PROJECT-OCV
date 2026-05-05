@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/OCV",      "destination": "/ocv", "permanent": true },
+    { "source": "/OCV.html", "destination": "/ocv", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",
