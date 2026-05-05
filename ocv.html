@@ -1563,7 +1563,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.1.4 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.5 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -2116,7 +2116,10 @@ function parseAll(files) {
   }
 
   // 0/U — inlet velocity
-  const Ufile = findFile(files, 'U');
+  // OF12's RANS tutorial ships 0/U.orig (Allrun copies it to 0/U).
+  // Fall back to U.orig so OCV can read inlet U + boundaryField even on a
+  // case that hasn't been Allrun'd.
+  const Ufile = findFile(files, 'U') || findFile(files, 'U.orig');
   if (Ufile) {
     const m = Ufile.match(/internalField\s+uniform\s+\(([^)]+)\)/);
     if (m) out.inletU = m[1].trim().split(/\s+/).map(Number);
@@ -3393,6 +3396,30 @@ const DEMO = {
   }
 };
 
+// Generic loader for any zip URL hosted alongside the app — used by the
+// "Self-hosted" tutorial cards. Mirrors the demo-load behaviour: fetch →
+// wrap as File → push through the same parsing pipeline → kick off
+// auto-rotate so the user sees the geometry immediately.
+function loadCaseFromUrl(url, displayName) {
+  log(`Loading ${displayName || url}…`);
+  fetch(url).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(blob => {
+    const fname = (url.split('/').pop() || 'case.zip');
+    const f = new File([blob], fname);
+    return loadZipFile(f, false);
+  }).then(() => {
+    if (Viewer.scene) {
+      Viewer.autoRot = true;
+      const btn = document.getElementById('btnAutoRot');
+      if (btn) btn.classList.add('active');
+    }
+  }).catch(err => {
+    log(`Failed to load ${displayName || url}: ${err.message}`, 'err');
+  });
+}
+
 function loadDemo() {
   // Try fetch first (works if served)
   log('Loading demo case…');
@@ -3713,26 +3740,20 @@ function renderSetupPane(paneKey) {
       saveHiddenSections(new Set(STRIP3_SECTIONS.map(s => s.cls))); applyHiddenSections(); renderSetupPane('sections');
     });
   } else if (paneKey === 'tutorials') {
-    // Some OpenFOAM tutorials don't ship the heavy geometry file inside the
-    // case folder — it lives in `tutorials/resources/geometry/`. The two
-    // motorBike cases below get a "+ Geometry" button that links directly
-    // to the .obj.gz so the user can drop it into `constant/triSurface/`
-    // (or just open it with OCV alongside the case).
-    const MOTORBIKE_OBJ_URL = 'https://git.psu.edu/axp5530/ics-rpm-tests/-/raw/9edc21ab01daa9f8484e7bbf5e66de77c2a914ed/openfoam/2.3.1/tutorials/resources/geometry/motorBike.obj.gz?inline=false';
+    // The two motorBike OF12 tutorials are hosted alongside the app
+    // (in /tutorials/ — repackaged from the OpenFOAM-12 master branch with
+    // geometry bundled). Click "Load Now" → fetched and parsed in-place.
+    // The other three tutorials are external links to download-directory.
     const TUTORIALS = [
       { name: 'motorBike (LES, transient) — bundled demo',
         desc: 'Bundled — Spalart-Allmaras DDES, pisoFoam, U=100 m/s. The Chien & Wang 2024 reference case.',
-        size: '~9 MB', kind: 'bundled', action: 'load-demo' },
+        size: '~9 MB', kind: 'bundled' },
       { name: 'motorBike (LES) — OpenFOAM official',
-        desc: 'OF12 official transient case — RANS precursor handed off to S-A DDES via lesFiles/. Geometry not bundled in the case folder; grab the .obj.gz separately.',
-        size: '~50 KB case · 8.5 MB geometry', kind: 'github',
-        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBike',
-        geometry: MOTORBIKE_OBJ_URL },
-      { name: 'motorBike (Steady RANS)',
-        desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline. Geometry not bundled in the case folder; grab the .obj.gz separately.',
-        size: '~50 KB case · 8.5 MB geometry', kind: 'github',
-        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBikeSteady',
-        geometry: MOTORBIKE_OBJ_URL },
+        desc: 'OF12 official transient case — RANS precursor handed off to S-A DDES via lesFiles/. Geometry bundled.',
+        size: '~3.6 MB', kind: 'hosted', url: '/tutorials/motorBike_LES.zip' },
+      { name: 'motorBike (Steady RANS) — OpenFOAM official',
+        desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline. Geometry bundled.',
+        size: '~3.6 MB', kind: 'hosted', url: '/tutorials/motorBikeSteady_RANS.zip' },
       { name: 'pitzDaily (RANS)',
         desc: 'Backward-facing step — classic separated flow benchmark, k-ω SST.',
         size: '~50 KB', kind: 'github',
@@ -3751,12 +3772,23 @@ function renderSetupPane(paneKey) {
       'Five reference cases for testing OCV. The first is bundled and loads instantly. The other four open the official OpenFOAM-12 tutorial folder on GitHub via <code>download-directory.github.io</code>, which produces a zip you can drop back onto OCV.</p>' +
       '<div style="display:grid;gap:8px;">';
     for (const tc of TUTORIALS) {
-      const tag = tc.kind === 'bundled' ?
-        '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">BUNDLED</span>' :
-        '<span style="background:var(--accent-cyan);color:#000;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">GITHUB</span>';
-      const geomBtn = tc.geometry
-        ? `<button data-geom="${tc.geometry}" style="font-size:9px;">+ Geometry (.obj.gz)</button>`
-        : '';
+      let tag;
+      if (tc.kind === 'bundled') {
+        tag = '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">BUNDLED</span>';
+      } else if (tc.kind === 'hosted') {
+        tag = '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">SELF-HOSTED</span>';
+      } else {
+        tag = '<span style="background:var(--accent-cyan);color:#000;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">GITHUB</span>';
+      }
+      let buttons;
+      if (tc.kind === 'bundled') {
+        buttons = '<button data-tut="demo" style="font-size:9px;">Load Now</button>';
+      } else if (tc.kind === 'hosted') {
+        buttons = `<button data-hosted="${tc.url}" data-name="${tc.name}" style="font-size:9px;">Load Now</button>`
+                + ` <button data-download="${tc.url}" style="font-size:9px;">Download .zip</button>`;
+      } else {
+        buttons = `<button data-tut="${tc.path}" data-repo="${tc.repo || ''}" style="font-size:9px;">Download via GitHub</button>`;
+      }
       html += `<div style="border:1px solid var(--line);padding:10px 12px;background:var(--bg-alt);">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
           ${tag}
@@ -3764,10 +3796,7 @@ function renderSetupPane(paneKey) {
           <span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text-mute);">${tc.size}</span>
         </div>
         <p style="font-size:10px;color:var(--text-soft);margin:4px 0 8px;">${tc.desc}</p>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button data-tut="${tc.kind === 'bundled' ? 'demo' : tc.path}" data-repo="${tc.repo || ''}" style="font-size:9px;">${tc.kind === 'bundled' ? 'Load Now' : 'Download via GitHub'}</button>
-          ${geomBtn}
-        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${buttons}</div>
       </div>`;
     }
     html += '</div>';
@@ -3780,9 +3809,14 @@ function renderSetupPane(paneKey) {
         window.open(url, '_blank');
       });
     });
-    // direct geometry download for tutorials whose .obj.gz isn't bundled
-    pane.querySelectorAll('button[data-geom]').forEach(b => {
-      b.addEventListener('click', () => window.open(b.dataset.geom, '_blank'));
+    pane.querySelectorAll('button[data-hosted]').forEach(b => {
+      b.addEventListener('click', () => {
+        closeModal('modalSetup');
+        loadCaseFromUrl(b.dataset.hosted, b.dataset.name);
+      });
+    });
+    pane.querySelectorAll('button[data-download]').forEach(b => {
+      b.addEventListener('click', () => window.open(b.dataset.download, '_blank'));
     });
   } else if (paneKey === 'info') {
     pane.innerHTML = `
