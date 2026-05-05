@@ -637,9 +637,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
   text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
 }
 
-/* Telemetry mini-plot */
+/* Telemetry mini-plot — motorsport-style multi-trace */
 #telemetry {
-  height: 80px;
+  height: 110px;
   border: 1px solid var(--line);
   background: var(--bg-deep);
   position: relative;
@@ -664,12 +664,54 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   color: var(--text);
+  pointer-events: none;
+}
+#telemetry .tlm-legend {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+#telemetry .tlm-legend span { display: flex; align-items: center; gap: 3px; }
+#telemetry .tlm-legend i {
+  display: inline-block;
+  width: 8px; height: 2px;
+  background: currentColor;
 }
 #telemetry .tlm-bg-line {
   stroke: var(--line);
-  stroke-width: 0.5;
+  stroke-width: 0.4;
   stroke-dasharray: 2 2;
+  fill: none;
 }
+
+/* Strip 3 close-section button + Setup re-add UI */
+.section-close {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--text-mute);
+  color: var(--text-mute);
+  width: 18px;
+  height: 18px;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  clip-path: none;
+  font-family: inherit;
+}
+.section-close:hover {
+  background: var(--accent-red);
+  border-color: var(--accent-red);
+  color: #fff;
+  box-shadow: var(--glow-red);
+  transform: none;
+}
+.dash > section.hidden { display: none; }
 
 /* ===== Modal / popup framework ===== */
 .modal-backdrop {
@@ -1418,7 +1460,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.0.0 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.0.2 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -1447,6 +1489,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
         <div class="setup-list" id="setupList">
           <button class="active" data-pane="theme">Color Theme</button>
           <button data-pane="rendering">Rendering</button>
+          <button data-pane="sections">Sections</button>
           <button data-pane="behavior">Behavior</button>
           <button data-pane="info">Info</button>
         </div>
@@ -1678,7 +1721,7 @@ function resetAll() {
   const btnAx = document.getElementById('btnAxes');
   if (btnAx) { btnAx.classList.add('active'); btnAx.textContent = 'Axes ON'; }
   // 7. display option toggles back to factory
-  const dDef = { dShowDom:true, dShowInlet:true, dShowGround:true, dShowGrid:false, dShowRefBox:false };
+  const dDef = { dShowDom:true, dShowInlet:true, dShowGrid:false, dShowRefBox:false };
   for (const id in dDef) {
     const b = document.getElementById(id); if (b) b.classList.toggle('active', dDef[id]);
   }
@@ -2590,11 +2633,18 @@ document.getElementById('btnAxes').addEventListener('click', () => {
   document.getElementById('btnAxes').classList.toggle('active', Viewer.axes.visible);
   document.getElementById('btnAxes').textContent = Viewer.axes.visible ? 'Axes ON' : 'Axes OFF';
 });
-document.getElementById('dShowDom').addEventListener('click', () => toggleObj('domainBox','dShowDom'));
-document.getElementById('dShowInlet').addEventListener('click', () => toggleObj('inletArrows','dShowInlet'));
-document.getElementById('dShowGround').addEventListener('click', () => toggleObj('ground','dShowGround'));
-document.getElementById('dShowRefBox').addEventListener('click', () => toggleObj('refBox','dShowRefBox'));
-document.getElementById('dShowGrid').addEventListener('click', () => toggleObj('grid','dShowGrid'));
+// Defensive helper — silently skip if button isn't in DOM (avoids breaking
+// the whole script when a button is removed in the future).
+function bindToggle(btnId, prop) {
+  const el = document.getElementById(btnId);
+  if (el) el.addEventListener('click', () => toggleObj(prop, btnId));
+}
+bindToggle('dShowDom',    'domainBox');
+bindToggle('dShowInlet',  'inletArrows');
+bindToggle('dShowGrid',   'grid');
+bindToggle('dShowRefBox', 'refBox');
+// dShowGround was removed in the 2x2 layout — guarded above so it can be
+// re-added later without code changes.
 
 function toggleObj(prop, btnId) {
   if (Viewer[prop]) {
@@ -3325,6 +3375,37 @@ function renderSetupPane(paneKey) {
       // simulate by toggling a class
       document.body.classList.toggle('no-scanlines', !e.target.checked);
     });
+  } else if (paneKey === 'sections') {
+    const hidden = getHiddenSections();
+    let html = '<h2>Strip 3 Sections</h2>' +
+      '<p style="font-size:12px;color:var(--text-soft);margin-bottom:14px;">' +
+      'Tick or untick to show/hide dashboard sections. Click the × on any section header in the dashboard to hide it from there too — toggle it back on here.</p>' +
+      '<div style="display:grid;gap:10px;">';
+    for (const s of STRIP3_SECTIONS) {
+      const isOn = !hidden.has(s.cls);
+      html += `<label style="display:flex;align-items:center;gap:12px;font-size:12px;cursor:pointer;padding:6px 10px;border:1px solid var(--line-soft);background:${isOn?'var(--bg-alt)':'var(--bg-deep)'};">
+        <input type="checkbox" data-section="${s.cls}" ${isOn?'checked':''}>
+        <span style="flex:1;">${s.title}</span>
+      </label>`;
+    }
+    html += '</div>' +
+      '<div style="margin-top:16px;display:flex;gap:6px;">' +
+      '<button id="setSecAll">Show All</button>' +
+      '<button id="setSecNone">Hide All</button>' +
+      '</div>';
+    pane.innerHTML = html;
+    pane.querySelectorAll('input[type=checkbox][data-section]').forEach(cb => {
+      cb.addEventListener('change', e => {
+        setSectionHidden(e.target.dataset.section, !e.target.checked);
+        renderSetupPane('sections');
+      });
+    });
+    document.getElementById('setSecAll').addEventListener('click', () => {
+      saveHiddenSections(new Set()); applyHiddenSections(); renderSetupPane('sections');
+    });
+    document.getElementById('setSecNone').addEventListener('click', () => {
+      saveHiddenSections(new Set(STRIP3_SECTIONS.map(s => s.cls))); applyHiddenSections(); renderSetupPane('sections');
+    });
   } else if (paneKey === 'info') {
     pane.innerHTML = `
       <h2>Info</h2>
@@ -3352,69 +3433,144 @@ const styleScan = document.createElement('style');
 styleScan.textContent = '.no-scanlines body::before, body.no-scanlines::before { display: none; }';
 document.head.appendChild(styleScan);
 
-/* ===================== TELEMETRY (3D viewer action plot) ===================== */
+/* ===================== TELEMETRY — mouse XYZ over time =====================
+   Motorsport-style 3-trace plot of mouse movement on the 3D viewer.
+   - dX (red): horizontal mouse velocity over canvas (px/sample)
+   - dY (cyan): vertical mouse velocity over canvas
+   - Z  (text): wheel input (zoom) — decays back toward zero
+   X axis is time (newest sample on the right). Y is signed velocity, ±20 px clip.
+   ============================================================================= */
 const Telemetry = {
-  history: [],          // array of { t, action, magnitude }
-  maxPoints: 80,
+  history: [],          // array of { t, dx, dy, dz }
+  maxPoints: 140,
   el: null,
+  mouseX: 0, mouseY: 0, prevMX: 0, prevMY: 0,
+  pendingDx: 0, pendingDy: 0, wheelZ: 0,
+  inside: false,
   init() {
     this.el = document.getElementById('telemetry');
     if (!this.el) return;
-    this.el.innerHTML = '<div class="tlm-label">3D Action Telemetry</div><div class="tlm-stat" id="tlmStat">— idle —</div><svg viewBox="0 0 200 80" preserveAspectRatio="none"><line class="tlm-bg-line" x1="0" y1="40" x2="200" y2="40"/><polyline id="tlmLine" fill="none" stroke="var(--accent-red)" stroke-width="1.2"/><polyline id="tlmFill" fill="rgba(255,42,68,0.12)" stroke="none"/></svg>';
-    // sample: update every 60ms
+    this.el.innerHTML =
+      '<div class="tlm-label">3D Viewer Telemetry · mouse Δ</div>' +
+      '<div class="tlm-legend"><span style="color:var(--accent-red);"><i></i>X</span>' +
+      '<span style="color:var(--accent-cyan);"><i></i>Y</span>' +
+      '<span style="color:var(--text);"><i></i>Z</span></div>' +
+      '<div class="tlm-stat" id="tlmStat">— idle —</div>' +
+      '<svg viewBox="0 0 200 110" preserveAspectRatio="none">' +
+      '<line class="tlm-bg-line" x1="0" y1="55" x2="200" y2="55"/>' +
+      '<line class="tlm-bg-line" x1="0" y1="27" x2="200" y2="27"/>' +
+      '<line class="tlm-bg-line" x1="0" y1="83" x2="200" y2="83"/>' +
+      '<polyline id="tlmLineX" fill="none" stroke="var(--accent-red)" stroke-width="1"/>' +
+      '<polyline id="tlmLineY" fill="none" stroke="var(--accent-cyan)" stroke-width="1"/>' +
+      '<polyline id="tlmLineZ" fill="none" stroke="var(--text)" stroke-width="0.9" opacity="0.65"/>' +
+      '</svg>';
+    // attach pointer listeners to the 3D viewer canvas
+    const canvas = document.getElementById('viewer-canvas');
+    if (canvas) {
+      canvas.addEventListener('pointermove', e => {
+        const r = canvas.getBoundingClientRect();
+        const nx = e.clientX - r.left, ny = e.clientY - r.top;
+        this.pendingDx += (nx - this.mouseX);
+        this.pendingDy += (ny - this.mouseY);
+        this.mouseX = nx; this.mouseY = ny;
+        this.inside = true;
+      });
+      canvas.addEventListener('pointerleave', () => { this.inside = false; });
+      canvas.addEventListener('wheel', e => { this.wheelZ += e.deltaY * 0.05; }, { passive: true });
+    }
+    // sample @ ~16 fps
     setInterval(() => this.sample(), 60);
   },
-  log(action, magnitude) {
-    const t = performance.now();
-    this.history.push({ t, action, magnitude });
-    if (this.history.length > 400) this.history.shift();
-  },
   sample() {
-    if (!this.el || !Viewer || !Viewer.scene) return;
-    // synthesize a "user activity" magnitude:
-    //   azimuth velocity + zoom velocity + rotation contribution
-    const a = Viewer.azimuth || 0;
-    const p = Viewer.polar || 0;
-    const d = Viewer.dist || 0;
-    if (this._prev === undefined) this._prev = { a, p, d };
-    const da = Math.abs(a - this._prev.a);
-    const dp = Math.abs(p - this._prev.p);
-    const dd = Math.abs(d - this._prev.d) / Math.max(d, 1);
-    let mag = (da + dp) * 30 + dd * 50;
-    if (Viewer.autoRot) mag = Math.max(mag, 8);
-    mag = Math.min(40, mag);
-    this._prev = { a, p, d };
-    this.history.push({ t: performance.now(), mag });
+    const dx = this.inside ? this.pendingDx : 0;
+    const dy = this.inside ? this.pendingDy : 0;
+    const dz = this.wheelZ;
+    this.pendingDx = 0; this.pendingDy = 0;
+    this.wheelZ *= 0.78;          // exponential decay back to 0
+    if (Math.abs(this.wheelZ) < 0.02) this.wheelZ = 0;
+    this.history.push({ t: performance.now(), dx, dy, dz });
     while (this.history.length > this.maxPoints) this.history.shift();
     this.draw();
   },
   draw() {
-    const line = document.getElementById('tlmLine');
-    const fill = document.getElementById('tlmFill');
-    const stat = document.getElementById('tlmStat');
-    if (!line || !this.history.length) return;
-    const w = 200, h = 80, mid = 40;
+    const lineX = document.getElementById('tlmLineX');
+    const lineY = document.getElementById('tlmLineY');
+    const lineZ = document.getElementById('tlmLineZ');
+    const stat  = document.getElementById('tlmStat');
+    if (!lineX || !this.history.length) return;
+    const w = 200, mid = 55, range = 20;
     const N = this.history.length;
-    let pts = [];
+    const ptsX = [], ptsY = [], ptsZ = [];
+    const clip = v => Math.max(-range, Math.min(range, v));
     for (let i = 0; i < N; i++) {
       const x = (i / (this.maxPoints - 1)) * w;
-      const m = this.history[i].mag || 0;
-      const y = mid - m;   // up = activity
-      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      const e = this.history[i];
+      ptsX.push(`${x.toFixed(1)},${(mid - clip(e.dx)).toFixed(1)}`);
+      ptsY.push(`${x.toFixed(1)},${(mid - clip(e.dy)).toFixed(1)}`);
+      ptsZ.push(`${x.toFixed(1)},${(mid - clip(e.dz)).toFixed(1)}`);
     }
-    line.setAttribute('points', pts.join(' '));
-    // fill polygon — close down to baseline
-    const fillPts = pts.concat([`${(((N-1)/(this.maxPoints-1))*w).toFixed(1)},${mid}`, `0,${mid}`]).join(' ');
-    fill.setAttribute('points', fillPts);
-    const last = this.history[N - 1];
-    const peak = Math.max(...this.history.map(p => p.mag || 0));
-    if (stat) stat.textContent = `Δ ${last.mag.toFixed(1)}  ·  peak ${peak.toFixed(0)}`;
+    lineX.setAttribute('points', ptsX.join(' '));
+    lineY.setAttribute('points', ptsY.join(' '));
+    lineZ.setAttribute('points', ptsZ.join(' '));
+    if (stat) {
+      const e = this.history[N - 1];
+      const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(1).padStart(5);
+      stat.textContent = `X${fmt(e.dx)}  Y${fmt(e.dy)}  Z${fmt(e.dz)}`;
+    }
   }
 };
 window.addEventListener('load', () => setTimeout(() => Telemetry.init(), 800));
 
+/* ===================== STRIP 3 — close / re-add sections ===================== */
+const STRIP3_SECTIONS = [
+  { cls: 's-workflow', title: '01 · Workflow Pipeline' },
+  { cls: 's-models',   title: '02 · Models · Schemes' },
+  { cls: 's-equations',title: '03 · Governing Equations' },
+  { cls: 's-bcs',      title: '04 · Boundary Patches' },
+  { cls: 's-params',   title: '05 · Parameters · CFL' },
+  { cls: 's-mesh',     title: '06 · Mesh Setup' },
+  { cls: 's-aero',     title: '07 · Aerodynamics' }
+];
+const SECTIONS_KEY = 'ocv-hidden-sections';
+function getHiddenSections() {
+  try { return new Set(JSON.parse(localStorage.getItem(SECTIONS_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function saveHiddenSections(set) { localStorage.setItem(SECTIONS_KEY, JSON.stringify([...set])); }
+function applyHiddenSections() {
+  const hidden = getHiddenSections();
+  STRIP3_SECTIONS.forEach(({cls}) => {
+    const sec = document.querySelector(`.${cls}`);
+    if (sec) sec.classList.toggle('hidden', hidden.has(cls));
+  });
+}
+function setSectionHidden(cls, isHidden) {
+  const hidden = getHiddenSections();
+  if (isHidden) hidden.add(cls); else hidden.delete(cls);
+  saveHiddenSections(hidden);
+  applyHiddenSections();
+}
+function injectSectionCloseButtons() {
+  STRIP3_SECTIONS.forEach(({cls}) => {
+    const sec = document.querySelector(`.${cls}`);
+    if (!sec) return;
+    const h3 = sec.querySelector('h3');
+    if (!h3 || h3.querySelector('.section-close')) return;
+    const close = document.createElement('button');
+    close.className = 'section-close';
+    close.textContent = '×';
+    close.title = 'Hide this section · re-enable via Setup → Sections';
+    close.addEventListener('click', e => {
+      e.stopPropagation();
+      setSectionHidden(cls, true);
+    });
+    h3.appendChild(close);
+  });
+  applyHiddenSections();
+}
+window.addEventListener('load', () => setTimeout(injectSectionCloseButtons, 200));
+
 log('OCV ready · drop a .zip or click Demo', 'ok');
 
 </script>
-</body>
-</html>
+</
