@@ -19,15 +19,18 @@
   --text-soft: #555;
   --text-mute: #888;
   --accent: #111;
-  --warn: #b04a00;
-  --ok: #2a4a8a;
+  --warn: #8a4a00;
+  --ok: #555555;
   --err: #a01818;
   --accent-red: #c8102e;
   --accent-red-dim: #a00d24;
-  --accent-cyan: #00b4d8;
-  --accent-cyan-dim: #007a99;
+  /* Light mode is monotone + red — no blue. The "cyan" tokens are remapped
+     to neutral greys here so any UI that references --accent-cyan still
+     looks correct without introducing blue. */
+  --accent-cyan: #4a4a4a;
+  --accent-cyan-dim: #2a2a2a;
   --glow-red: 0 0 10px rgba(200, 16, 46, 0.55);
-  --glow-cyan: 0 0 10px rgba(0, 180, 216, 0.5);
+  --glow-cyan: 0 0 8px rgba(80, 80, 80, 0.35);
   --layer-1: #b8b0a0;
   --layer-2: #a0a8b0;
   --layer-3: #b0a8b0;
@@ -608,6 +611,223 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
 }
 .toggle-row { display: flex; gap: 0; margin-bottom: 4px; }
 .toggle-row button { flex: 1; min-width: 0; }
+.toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.toggle-grid button {
+  width: 100%;
+  text-align: center;
+  padding: 6px 4px;
+  font-size: 10px;
+}
+
+/* footer brand link */
+.brand-link {
+  color: var(--accent-red);
+  text-decoration: none;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 6px rgba(255, 42, 68, 0.5);
+  transition: text-shadow 160ms ease, color 160ms ease;
+}
+.brand-link:hover {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+}
+
+/* Telemetry mini-plot */
+#telemetry {
+  height: 80px;
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+#telemetry svg { width: 100%; height: 100%; display: block; }
+#telemetry .tlm-label {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+#telemetry .tlm-stat {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text);
+}
+#telemetry .tlm-bg-line {
+  stroke: var(--line);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 2;
+}
+
+/* ===== Modal / popup framework ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop.show { display: flex; }
+.modal {
+  background: var(--bg);
+  border: 1px solid var(--accent-red);
+  box-shadow: var(--glow-red), 0 0 60px rgba(0, 0, 0, 0.6);
+  max-width: 920px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* motorsport cut corners */
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--accent-red);
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--accent-red);
+  text-shadow: 0 0 6px rgba(255, 42, 68, 0.5);
+}
+.modal-head .close-x {
+  background: none;
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  padding: 0;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+.modal-head .close-x:hover { background: var(--accent-red); color: #fff; }
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.modal-body h1, .modal-body h2, .modal-body h3 {
+  font-family: 'Saira Condensed', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+.modal-body h1 { font-size: 18px; color: var(--accent-red); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.modal-body h2 { font-size: 14px; color: var(--accent-cyan); }
+.modal-body h3 { font-size: 12px; color: var(--text); }
+.modal-body p { margin-bottom: 10px; }
+.modal-body a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dotted var(--accent-cyan); }
+.modal-body a:hover { color: var(--accent-red); border-bottom-color: var(--accent-red); }
+.modal-body ul { margin: 8px 0 12px 18px; }
+.modal-body li { margin-bottom: 4px; }
+.modal-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--bg-alt);
+  padding: 1px 5px;
+  border: 1px solid var(--line-soft);
+}
+
+/* Setup modal: 2-column layout */
+.setup-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 360px;
+  border: 1px solid var(--line);
+}
+.setup-list {
+  border-right: 1px solid var(--line);
+  background: var(--bg-alt);
+}
+.setup-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text-soft);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+.setup-list button:hover { background: var(--bg-deep); color: var(--text); box-shadow: none; transform: none; }
+.setup-list button.active {
+  background: var(--bg-deep);
+  color: var(--accent-red);
+  border-left: 3px solid var(--accent-red);
+  border-bottom: 1px solid var(--line-soft);
+  box-shadow: none;
+}
+.setup-pane { padding: 18px 22px; }
+.setup-pane h2 {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.theme-card {
+  border: 1px solid var(--line);
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg-alt);
+}
+.theme-card:hover { border-color: var(--accent-cyan); box-shadow: var(--glow-cyan); transform: translateY(-2px); }
+.theme-card.selected { border-color: var(--accent-red); box-shadow: var(--glow-red); }
+.theme-swatches {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
+  height: 18px;
+}
+.theme-swatches span { flex: 1; }
+.theme-name { font-weight: 600; }
+.theme-desc { font-size: 9px; color: var(--text-mute); margin-top: 4px; letter-spacing: 0.06em; }
 
 /* ===================== STRIP 3 ===================== */
 #strip3 {
@@ -826,6 +1046,196 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 
 /* hidden file input */
 #fileInput { display: none; }
+
+/* ========================================================================
+   Mobile / cell phone RWD (≤ 720 px viewport)
+   - Stack the 5 strips vertically as a normal scrolling document
+   - Stack Strip 2's three columns one above another, viewport at 60vh
+   - Single-column dashboards in Strip 3, pipeline scrolls horizontally
+   - Hide the column / Strip-3 drag resizers (no purpose on touch)
+   - Bigger tap targets, looser padding, weaker scanlines
+   ======================================================================== */
+@media (max-width: 720px) {
+  html, body {
+    height: auto;
+    overflow: auto;
+    font-size: 13px;
+  }
+  body {
+    display: block;
+    grid-template-rows: none;
+    height: auto;
+  }
+  body::before { opacity: 0.35; }
+
+  /* Strip 0 — vertical stack of three rows */
+  #strip0 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
+    text-align: center;
+  }
+  #strip0 .left, #strip0 .right { justify-content: center; flex-wrap: wrap; }
+  #strip0 .center {
+    border-left: none; border-right: none;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+  }
+
+  /* Strip 1 — single column, buttons wrap */
+  #strip1 {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+  #strip1 > div {
+    border-left: none !important;
+    border-top: 1px solid var(--line);
+    padding: 8px 12px;
+    height: auto;
+    width: 100%;
+  }
+  #strip1 > div:first-child { border-top: none; }
+  #strip1 .btn-row {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 4px;
+    justify-content: stretch;
+  }
+  #strip1 .btn-row button {
+    flex: 1 1 80px;
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  #console {
+    height: auto;
+    min-height: 28px;
+    overflow-x: auto;
+  }
+
+  /* Strip 2 — vertical stack, viewport gets a fixed-height window */
+  #strip2 {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--line);
+  }
+  #strip2 .resizer { display: none; }
+  #strip2 .col {
+    width: 100% !important;
+    max-height: none;
+  }
+  #colCenter {
+    height: 60vh;
+    min-height: 320px;
+    background: var(--bg-deep);
+  }
+  #colLeft, #colRight {
+    height: auto;
+    max-height: 50vh;
+    border-top: 1px solid var(--line);
+  }
+  #viewer-wrap { width: 100%; height: 100%; }
+  .viewer-toolbar {
+    top: 4px; left: 4px;
+    padding: 4px;
+    max-width: 130px;
+  }
+  .viewer-toolbar button {
+    font-size: 9px;
+    padding: 5px 6px;
+    min-width: 0;
+    text-align: left;
+  }
+  .axis-label { font-size: 11px; padding: 2px 5px; }
+
+  /* Strip-3 height resizer — hide on touch */
+  .hresize { display: none; }
+
+  /* Strip 3 — every section spans the full row */
+  #strip3 {
+    max-height: none;
+    overflow: visible;
+  }
+  .dash {
+    grid-template-columns: 1fr;
+  }
+  .dash > section {
+    grid-column: 1 / -1 !important;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  /* Pipeline scrolls sideways on phone */
+  .pipeline {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+  .pipeline .step { flex: 0 0 200px; }
+
+  /* Bigger tap targets */
+  button { min-height: 36px; }
+  .geom-row { padding: 14px 10px; }
+  .geom-eye { width: 18px; height: 18px; }
+  .geom-swatch { width: 22px; height: 22px; }
+  .geom-opacity { height: 8px; }
+  .geom-opacity::-webkit-slider-thumb { width: 14px; height: 20px; }
+  .geom-opacity::-moz-range-thumb { width: 14px; height: 20px; }
+
+  /* Modal — full-bleed on phone */
+  .modal-backdrop { padding: 8px; }
+  .modal {
+    max-width: 100%;
+    max-height: 96vh;
+    clip-path: none;
+  }
+  .modal-head { padding: 10px 14px; font-size: 11px; }
+  .modal-body { padding: 14px 16px; font-size: 13px; }
+  .setup-grid { grid-template-columns: 1fr; }
+  .setup-list {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .setup-list button {
+    flex: 0 0 auto;
+    border-bottom: none;
+    border-right: 1px solid var(--line-soft);
+    padding: 10px 14px;
+  }
+  .setup-list button.active {
+    border-left: none;
+    border-bottom: 3px solid var(--accent-red);
+  }
+
+  /* Footer wraps, smaller text */
+  #strip4 {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    font-size: 8px;
+    gap: 4px;
+    justify-content: center;
+    text-align: center;
+  }
+  #strip4 > div { width: 100%; }
+}
+
+/* Very small phones — extra tight */
+@media (max-width: 380px) {
+  html, body { font-size: 12px; }
+  #strip0 .left, #strip0 .right { font-size: 8px; }
+  #strip1 .btn-row button { flex-basis: calc(50% - 4px); font-size: 10px; }
+  .viewer-toolbar { max-width: 110px; }
+  .viewer-toolbar button { font-size: 8px; padding: 4px 5px; }
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -861,7 +1271,8 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
     <input type="file" id="fileInput" accept=".zip">
     <button id="btnValidate">Valid</button>
     <button id="btnReset">Reset</button>
-    <button id="btnDemo">Load Demo</button>
+    <button id="btnDemo">Demo</button>
+    <button id="btnSetup">Setup</button>
   </div>
 </section>
 
@@ -942,15 +1353,16 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
       </div>
       <div class="prop-section">
         <h4>Display Options</h4>
-        <div class="toggle-row">
+        <div class="toggle-grid">
           <button id="dShowDom" class="active">Domain</button>
           <button id="dShowInlet" class="active">Inlet ▶</button>
           <button id="dShowGrid">Grid</button>
-        </div>
-        <div class="toggle-row">
           <button id="dShowRefBox">RefBox</button>
-          <button id="dShowGround" class="active">Ground</button>
         </div>
+      </div>
+      <div class="prop-section">
+        <h4>Telemetry</h4>
+        <div id="telemetry"></div>
       </div>
     </div>
   </div>
@@ -1006,11 +1418,43 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.0.0 · 04 MAY 2026 · cyberpunk · motorsport</div>
+  <div>Edition 2.0.0 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
 <div id="drop-overlay"><div class="box">Drop .zip case</div></div>
+
+<!-- ============== ABOUT MODAL ============== -->
+<div class="modal-backdrop" id="modalAbout">
+  <div class="modal">
+    <div class="modal-head">
+      <span>About · Project OCV</span>
+      <button class="close-x" data-close="modalAbout">×</button>
+    </div>
+    <div class="modal-body" id="aboutBody"></div>
+  </div>
+</div>
+
+<!-- ============== SETUP MODAL ============== -->
+<div class="modal-backdrop" id="modalSetup">
+  <div class="modal" style="max-width: 760px;">
+    <div class="modal-head">
+      <span>Setup</span>
+      <button class="close-x" data-close="modalSetup">×</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div class="setup-grid">
+        <div class="setup-list" id="setupList">
+          <button class="active" data-pane="theme">Color Theme</button>
+          <button data-pane="rendering">Rendering</button>
+          <button data-pane="behavior">Behavior</button>
+          <button data-pane="info">Info</button>
+        </div>
+        <div class="setup-pane" id="setupPane"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1249,21 +1693,68 @@ function resetAll() {
 
 function validate() {
   if (!STATE.parsed) { log('Nothing to validate — load a case first','warn'); return; }
-  const checks = [];
   const p = STATE.parsed;
+  const checks = [];
+  // Section A — required dictionary keys present
   checks.push(['controlDict.application', !!p.application, p.application||'missing']);
-  checks.push(['transportProperties.nu', !!p.nu, p.nu||'missing']);
+  checks.push(['nu (transport / physical)', !!p.nu, p.nu!=null?`${p.nu.toExponential(2)} m²/s`:'missing']);
   checks.push(['momentumTransport.simulationType', !!p.simulationType, p.simulationType||'missing']);
   checks.push(['blockMeshDict vertices', !!p.domain, p.domain ? `${p.domain.size.x}×${p.domain.size.y}×${p.domain.size.z} m` : 'missing']);
   checks.push(['snappyHexMesh refinement', !!p.refSurface, p.refSurface ? `(${p.refSurface.min},${p.refSurface.max})` : 'missing']);
   checks.push(['inlet U', !!p.inletU, p.inletU? `(${p.inletU.join(' ')})`:'missing']);
-  checks.push(['CFL plausible', p.cflWake!=null && p.cflWake < 5, p.cflWake!=null?`CFL_wake=${p.cflWake.toFixed(2)}`:'n/a']);
-  let pass = 0;
-  for (const [name, ok, val] of checks) {
-    log(`${ok?'OK ':'!! '} ${name}: ${val}`, ok?'ok':'warn');
-    if (ok) pass++;
+  // Section B — academic-paper-grounded vehicle CFD rules (Chien & Wang 2024)
+  if (p.Uref) {
+    const Ma = p.Uref / 340;
+    checks.push(['Mach < 0.3 (incompressible OK)', Ma < 0.3, `Ma=${Ma.toFixed(3)}`]);
   }
-  log(`Validation: ${pass}/${checks.length} passed`, pass===checks.length?'ok':'warn');
+  if (p.cflWake!=null) {
+    checks.push(['CFL_wake plausible (<5)', p.cflWake < 5, `CFL_wake=${p.cflWake.toFixed(2)}`]);
+  }
+  if (p.cflSurface!=null && p.simulationType === 'LES') {
+    // LES typically wants surface CFL <~10 with implicit PISO; warn above 20
+    checks.push(['CFL_surface (LES, implicit) reasonable', p.cflSurface < 20, `CFL_surface=${p.cflSurface.toFixed(1)}`]);
+  }
+  if (p.refSurface) {
+    // Paper recommends finer wall mesh for LES (y+<1); levels 9-10 typical
+    if (p.simulationType === 'LES') {
+      checks.push(['LES surface refinement ≥ 9', p.refSurface.max >= 9, `lvl ${p.refSurface.min}-${p.refSurface.max}`]);
+    } else {
+      checks.push(['RANS surface refinement ≥ 5', p.refSurface.max >= 5, `lvl ${p.refSurface.min}-${p.refSurface.max}`]);
+    }
+  }
+  if (p.domain && p.refBox) {
+    // Refinement box should sit fully inside domain
+    const inDom = p.refBox.min.x >= p.domain.min.x && p.refBox.max.x <= p.domain.max.x &&
+                  p.refBox.min.y >= p.domain.min.y && p.refBox.max.y <= p.domain.max.y &&
+                  p.refBox.min.z >= p.domain.min.z && p.refBox.max.z <= p.domain.max.z;
+    checks.push(['refinementBox inside domain', inDom, inDom?'ok':'overflow']);
+  }
+  if (p.lRef && p.Aref && p.domain) {
+    // Blockage ratio < 5% is a common wind-tunnel guideline
+    const front = p.domain.size.y * p.domain.size.z;     // half-domain (sym plane)
+    const blockage = p.Aref / (front * 2);                 // approximate
+    checks.push(['blockage ratio < 0.05', blockage < 0.05, `${(blockage*100).toFixed(2)}%`]);
+  }
+  if (p.bmPatches && p.uBC) {
+    // Every blockMesh patch must have a U BC defined
+    const missing = p.bmPatches.filter(pp => !(pp.name in p.uBC));
+    checks.push(['every patch has U BC', missing.length === 0, missing.length ? `missing on ${missing.map(m=>m.name).join(', ')}` : 'all covered']);
+  }
+  if (p.simulationType === 'LES' && p.divU) {
+    // Paper uses "Gauss linear" or LUST for LES convection — warn if upwind
+    const upwind = /upwind/i.test(p.divU) && !/LUST|linear/i.test(p.divU);
+    checks.push(['LES uses LUST/linear (not pure upwind)', !upwind, p.divU]);
+  }
+  if (p.nCorrectors!=null && p.simulationType === 'LES') {
+    checks.push(['PISO nCorrectors ≥ 2 (LES)', p.nCorrectors >= 2, `n=${p.nCorrectors}`]);
+  }
+  let pass = 0, warns = 0;
+  for (const [name, ok, val] of checks) {
+    log(`${ok?'OK  ':'!!  '}${name}: ${val}`, ok?'ok':'warn');
+    if (ok) pass++; else warns++;
+  }
+  log(`Validation: ${pass}/${checks.length} passed (${warns} warning${warns===1?'':'s'})`, warns===0?'ok':'warn');
+  log('Rules informed by Chien & Wang 2024 (doi:10.1093/jom/ufae025) — see About', 'ok');
 }
 
 // ----------- OpenFOAM dict parsing -----------
@@ -1415,6 +1906,13 @@ function parseAll(files) {
   const cd = findFile(files, 'controlDict');
   if (cd) {
     out.application = findKey(cd, 'application');
+    // OF12 uses `application foamRun;` plus `solver incompressibleFluid;` —
+    // surface the real solver name when application is the launcher.
+    const solver = findKey(cd, 'solver');
+    if (solver && (out.application === 'foamRun' || out.application === 'foamMultiRun')) {
+      out.application = `${out.application} (${solver})`;
+      out.solverModule = solver;
+    }
     out.deltaT = parseFloat(findKey(cd, 'deltaT'));
     out.endTime = parseFloat(findKey(cd, 'endTime'));
     out.startTime = parseFloat(findKey(cd, 'startTime'));
@@ -1429,11 +1927,16 @@ function parseAll(files) {
     out.lesEndTime = parseFloat(findKey(lesCd, 'endTime'));
   }
 
-  // transportProperties
-  const tp = findFile(files, 'transportProperties');
+  // transportProperties (OF ≤ 11) OR physicalProperties (OF 12+)
+  const tp = findFile(files, 'transportProperties') || findFile(files, 'physicalProperties');
   if (tp) {
     const m = tp.match(/nu\s+\[[^\]]*\]\s+([0-9.eE+\-]+)/);
     if (m) out.nu = parseFloat(m[1]);
+    // also handle OF12 form: `nu  1.5e-05;` without dimensions
+    if (!out.nu) {
+      const m2 = tp.match(/(?:^|\s)nu\s+([0-9.eE+\-]+)\s*;/);
+      if (m2) out.nu = parseFloat(m2[1]);
+    }
   }
 
   // momentumTransport — prefer LES file
@@ -1530,23 +2033,26 @@ function parseAll(files) {
     out.maxGlobalCells = parseFloat(findKey(sh, 'maxGlobalCells'));
   }
 
-  // decomposeParDict (any of the variants)
+  // decomposeParDict — OF ≤11 uses `method`, OF 12 uses `decomposer`
   const dp = Object.entries(files).find(([k]) => /decomposeParDict/.test(k))?.[1];
   if (dp) {
     out.nProcs = parseInt(findKey(dp, 'numberOfSubdomains'));
-    out.decompMethod = findKey(dp, 'method');
+    out.decompMethod = findKey(dp, 'method') || findKey(dp, 'decomposer');
+    out.decompDistributor = findKey(dp, 'distributor');
   }
 
-  // forceCoeffs
+  // forceCoeffs — OF ≤11 has flat keys, OF 12 wraps in forceCoeffs1 sub-dict.
   const fc = findFile(files, 'forceCoeffs');
   if (fc) {
-    out.lRef = parseFloat(findKey(fc, 'lRef'));
-    out.Aref = parseFloat(findKey(fc, 'Aref'));
-    out.magUInf = parseFloat(findKey(fc, 'magUInf'));
-    out.rhoInf = parseFloat(findKey(fc, 'rhoInf'));
-    const ld = fc.match(/liftDir\s+\(([^)]+)\)/); if (ld) out.liftDir = ld[1].trim().split(/\s+/).map(Number);
-    const dd = fc.match(/dragDir\s+\(([^)]+)\)/); if (dd) out.dragDir = dd[1].trim().split(/\s+/).map(Number);
-    const pa = fc.match(/pitchAxis\s+\(([^)]+)\)/); if (pa) out.pitchAxis = pa[1].trim().split(/\s+/).map(Number);
+    // Try the OF12 wrapper first; fall back to flat OF11 layout.
+    const inner = findBlock(fc, 'forceCoeffs1') || findBlock(fc, 'forceCoeffs') || fc;
+    out.lRef = parseFloat(findKey(inner, 'lRef'));
+    out.Aref = parseFloat(findKey(inner, 'Aref'));
+    out.magUInf = parseFloat(findKey(inner, 'magUInf'));
+    out.rhoInf = parseFloat(findKey(inner, 'rhoInf'));
+    const ld = inner.match(/liftDir\s+\(([^)]+)\)/); if (ld) out.liftDir = ld[1].trim().split(/\s+/).map(Number);
+    const dd = inner.match(/dragDir\s+\(([^)]+)\)/); if (dd) out.dragDir = dd[1].trim().split(/\s+/).map(Number);
+    const pa = inner.match(/pitchAxis\s+\(([^)]+)\)/); if (pa) out.pitchAxis = pa[1].trim().split(/\s+/).map(Number);
   }
 
   // fvSchemes (LES preferred)
@@ -1677,9 +2183,10 @@ const Viewer = {
       const ro = new ResizeObserver(() => this.onResize());
       ro.observe(document.getElementById('viewer-wrap'));
     }
+    this.autoRotSpeed = 0.004;
     const tick = () => {
       requestAnimationFrame(tick);
-      if (this.autoRot) this.azimuth += 0.004;
+      if (this.autoRot) this.azimuth += (this.autoRotSpeed || 0.004);
       this.updateCam();
       this.renderer.render(this.scene, this.camera);
       this.updateAxisLabels();
@@ -2592,7 +3099,321 @@ function loadDemo() {
   });
 }
 
-log('OCV ready · drop a .zip or click Load Demo', 'ok');
+/* ===================== MODALS ===================== */
+function openModal(id) { const m = document.getElementById(id); if (m) m.classList.add('show'); }
+function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.close)));
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('click', e => { if (e.target === bd) bd.classList.remove('show'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop.show').forEach(m => m.classList.remove('show'));
+});
+
+/* ===================== ABOUT POPUP ===================== */
+const ABOUT_HTML = `
+<h1>OCV — OpenFOAM Case Viewer</h1>
+<p><em>A free, browser-based pre-flight check for vehicle CFD cases. Built collaboratively with Claude. Open source. Welcoming contributions from the OpenFOAM community, the academic CFD field, and the motorsport engineering world.</em></p>
+
+<h2>Why this exists</h2>
+<p>Computational fluid dynamics is one of the most demanding workflows in modern engineering. A motorsport team or a graduate-school research group will routinely spend hours setting up a single case — meshing the vehicle geometry, defining boundary conditions, choosing turbulence models, picking time-step sizes, deciding on refinement levels — and then commit hundreds of CPU-hours to running it. When the run completes and the engineer realises that a boundary condition was misnamed, that the Courant number in the wake region was an order of magnitude too high, or that the inlet velocity was set in the wrong reference frame, that compute time is simply lost. Every cluster night that is spent re-running a case that could have been caught in a thirty-second sanity check is a night that could have been spent on better science.</p>
+
+<p>OCV is a small attempt to take that thirty-second sanity check and make it free, instant, zero-install, and accessible to anyone with a web browser. Drop a zipped OpenFOAM case onto the page and — without sending anything to a server, without registering for an account, without installing dependencies — see the geometry rendered in 3D, see every parsed dictionary value laid out in a structured dashboard, see the boundary patches with their assigned conditions, see the derived CFL number, see the Reynolds and Mach numbers automatically computed from the inlet velocity and the kinematic viscosity. Catch the problem here, before it eats a cluster night.</p>
+
+<h2>What this is, what this is not</h2>
+<p>OCV is a <strong>pre-flight reviewer</strong>. It is not a solver. It does not run simpleFoam or pisoFoam. It does not modify your case files. It is a single static HTML page — every line of JavaScript, every dictionary parser, every Three.js material — that runs entirely on the client side. The case files you drag onto the page are read by your own browser, parsed by your own browser, and never leave your laptop. There is no telemetry beyond what your own browser does by default. There is no upload server. There is no account. There is no cookie. The bundled demo case is a static asset served from the same origin.</p>
+
+<p>That deliberate constraint is what makes OCV usable in environments where uploading data is restricted — university clusters with NDAs, motorsport teams with proprietary geometry, government CFD groups with sensitive aerodynamics work. If your security team will let you open a single HTML file in a browser, OCV will work for you.</p>
+
+<h2>What it does in practice</h2>
+<p>The application accepts a zipped OpenFOAM case directory. It extracts the archive in memory using JSZip, decompresses any <code>.obj.gz</code> geometry with pako, and parses every OpenFOAM dictionary it finds — controlDict, fvSchemes, fvSolution, momentumTransport, transportProperties, blockMeshDict, snappyHexMeshDict, decomposeParDict, forceCoeffs, the boundary fields in <code>0/U</code>, the include chain for boundary types, and the <code>lesFiles/</code> overrides used in two-stage RANS-then-LES workflows. The geometry is rendered with Three.js as a navigable 3D scene with named-layer groups, per-layer color and opacity controls, X/Y/Z axes, and a domain bounding box. The dashboard area below the viewport surfaces seven sections: the workflow pipeline, the turbulence/scheme/solver table, the governing equations, the boundary patch list, the derived parameters with CFL numbers, the mesh refinement settings, and the aerodynamic reference quantities. There is a one-click validation button that runs structured checks across every parsed dictionary and reports them in a timestamped console. There is a hard reset that returns every UI state to factory defaults. There is a setup panel where users can switch between five carefully-tuned color themes.</p>
+
+<h2>The methodology behind the validation rules</h2>
+<p>The validation logic in OCV is informed by <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener">Chien & Wang, "Numerical study of motorbike aerodynamic wing kit," Journal of Mechanics, Vol. 40, 2024, pp. 313–324, doi:10.1093/jom/ufae025</a>. The paper presents a mesh-independence study from 2.2 M to 163 M cells, a comparison between steady RANS (k-omega SST) and transient hybrid LES, and a downforce-to-drag optimization for an aerodynamic wing kit on a racing motorbike. OCV's parameter-checking rules — the recommended y+ targets, the CFL plausibility band, the mesh skewness tolerance, the Mach-number assumption for incompressible flow, the wake refinement level recommendation — all trace their lineage back to that paper's documented findings.</p>
+
+<p>This means OCV is not a generic CFD reviewer. It is specifically tuned for the vehicle aerodynamics regime: bluff-body external flow at Reynolds numbers of order 10⁶–10⁷, freestream velocities up to 100 m/s, incompressible-air assumption, snappyHexMesh on a triSurface body in a rectangular wind-tunnel domain. If your case sits in that regime, OCV will give you useful feedback. If you are running compressible aerospace flows, atmospheric boundary layer simulations, or multiphase flows, OCV will still parse and display your case, but the validation rules will be less informed.</p>
+
+<h2>Built with, and indebted to</h2>
+<p>OCV is the product of a collaboration between a human engineer and Claude (Anthropic), conducted across several pair-programming sessions in a chat-driven development environment. The codebase is intentionally small — a single HTML file, no build step, no framework, ES2020 vanilla JavaScript — so that anyone can read it end-to-end in a single sitting and propose changes.</p>
+
+<p>The application stands on the shoulders of:</p>
+<ul>
+  <li><strong>OpenFOAM</strong> — the open-source CFD toolbox developed by the OpenFOAM Foundation and ESI. Every dictionary key OCV parses comes from the OpenFOAM specification.</li>
+  <li><strong>Three.js</strong> — the WebGL 3D library by Ricardo Cabello and contributors, used for the geometry viewport.</li>
+  <li><strong>JSZip</strong> by Stuart Knightley — for decoding the uploaded archive in-browser.</li>
+  <li><strong>pako</strong> by Vitaly Puzrin — for gunzip of the bundled <code>.obj.gz</code> motorbike geometry.</li>
+  <li><strong>GitHub</strong> — for hosting the source and the v1.0.0 prototype archive.</li>
+  <li><strong>Vercel</strong> — for the zero-config static hosting that makes the live URL possible.</li>
+  <li><strong>Autodesk Fusion 360</strong> — used to author and clean the demonstration motorbike geometry.</li>
+  <li><strong>Claude</strong> by Anthropic — the AI pair-programmer that wrote a substantial portion of this code from natural-language design conversations.</li>
+</ul>
+
+<h2>Academic affiliation</h2>
+<p>Technical guidance and methodological grounding for this project are gratefully provided by the <strong>Computational Power Research Group (CPRG)</strong> at the <strong>National Taipei University of Technology (NTUT)</strong>, under <strong>Professor Chin-Cheng Wang</strong>. The wing-kit study referenced above was published with Prof. Wang as senior author. Any methodological strength in OCV is owed to that lab's published guidance; any errors are the application's own.</p>
+
+<h2>How to contribute</h2>
+<p>OCV is offered freely to the OpenFOAM user community, to academic CFD researchers, and to motorsport aerodynamics engineers. The repository accepts pull requests for additional dictionary parsers, expanded validation rules, more turbulence-model coverage, additional named geometry conventions, and translations. Issues and discussion tickets are welcomed. If you encounter a case that OCV mis-parses, please open an issue with a minimal reproducer — the project will only get better at handling the long tail of OpenFOAM cases if its parsers see more of them.</p>
+
+<p>The project is, and will remain, MIT-licensed and free of charge. There are no plans to introduce a paid tier, telemetry, or upload-to-cloud features. The aspiration is for OCV to be one small, dependable tool in the larger toolbox that the OpenFOAM community has built together.</p>
+
+<h2>Reference</h2>
+<p>Han Chien, Chin-Cheng Wang. <em>Numerical study of motorbike aerodynamic wing kit.</em> Journal of Mechanics, Vol. 40, 2024, pp. 313–324. <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener">doi:10.1093/jom/ufae025</a></p>
+
+<h2>Live and source</h2>
+<p>Live demo: <a href="https://project-ocv.vercel.app" target="_blank" rel="noopener">project-ocv.vercel.app</a><br>
+Source: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank" rel="noopener">github.com/HANCHIKUMA-13/PROJECT-OCV</a><br>
+v1.0.0 archive: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV/releases/tag/v1.0.0" target="_blank" rel="noopener">releases/tag/v1.0.0</a></p>
+
+<p style="margin-top:24px;font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.16em;">SHIBAYAMA MOTOR RACING · Project OCV · Edition 2.0.0</p>
+`;
+document.getElementById('aboutBody').innerHTML = ABOUT_HTML;
+document.getElementById('footerAbout').addEventListener('click', e => { e.preventDefault(); openModal('modalAbout'); });
+
+/* ===================== SETUP POPUP + COLOR THEMES ===================== */
+const COLOR_THEMES = {
+  default_dark: {
+    name: 'Default Dark',
+    desc: 'Cyberpunk red + cyan',
+    swatches: ['#0c0c0c', '#161616', '#ff2a44', '#00d9ff', '#f0f0f0'],
+    vars: {
+      '--bg':'#0c0c0c','--bg-alt':'#161616','--bg-deep':'#0a0a0a','--panel':'#131313',
+      '--line':'#303030','--line-soft':'#1f1f1f',
+      '--text':'#f0f0f0','--text-soft':'#b8b8b8','--text-mute':'#777',
+      '--accent-red':'#ff2a44','--accent-red-dim':'#b71c1c',
+      '--accent-cyan':'#00d9ff','--accent-cyan-dim':'#0099cc',
+      '--glow-red':'0 0 16px rgba(255,42,68,.65),0 0 2px rgba(255,42,68,.9)',
+      '--glow-cyan':'0 0 14px rgba(0,217,255,.55),0 0 2px rgba(0,217,255,.85)'
+    }
+  },
+  carbon: {
+    name: 'Carbon',
+    desc: 'Pure mono, no neon',
+    swatches: ['#0a0a0a', '#1a1a1a', '#cccccc', '#888888', '#ffffff'],
+    vars: {
+      '--bg':'#0a0a0a','--bg-alt':'#141414','--bg-deep':'#080808','--panel':'#101010',
+      '--line':'#2a2a2a','--line-soft':'#1a1a1a',
+      '--text':'#ffffff','--text-soft':'#bbbbbb','--text-mute':'#666',
+      '--accent-red':'#cccccc','--accent-red-dim':'#888888',
+      '--accent-cyan':'#888888','--accent-cyan-dim':'#555',
+      '--glow-red':'0 0 6px rgba(255,255,255,.25)',
+      '--glow-cyan':'0 0 6px rgba(255,255,255,.15)'
+    }
+  },
+  ferrari: {
+    name: 'Ferrari',
+    desc: 'Classic racing red',
+    swatches: ['#0e0a0a', '#1a1212', '#dc0000', '#ffd700', '#fff'],
+    vars: {
+      '--bg':'#0e0a0a','--bg-alt':'#1a1212','--bg-deep':'#0a0606','--panel':'#150f0f',
+      '--line':'#3a2a2a','--line-soft':'#241a1a',
+      '--text':'#ffffff','--text-soft':'#d8c8c8','--text-mute':'#7d6868',
+      '--accent-red':'#dc0000','--accent-red-dim':'#a00000',
+      '--accent-cyan':'#ffd700','--accent-cyan-dim':'#c8a000',
+      '--glow-red':'0 0 18px rgba(220,0,0,.7),0 0 2px rgba(220,0,0,1)',
+      '--glow-cyan':'0 0 12px rgba(255,215,0,.5),0 0 2px rgba(255,215,0,.85)'
+    }
+  },
+  blueprint: {
+    name: 'Blueprint',
+    desc: 'Engineering paper light',
+    swatches: ['#fafafa', '#ececec', '#c8102e', '#4a4a4a', '#0a0a0a'],
+    vars: {
+      '--bg':'#fafafa','--bg-alt':'#ececec','--bg-deep':'#dadada','--panel':'#f0f0f0',
+      '--line':'#b8b8b8','--line-soft':'#d0d0d0',
+      '--text':'#0a0a0a','--text-soft':'#444','--text-mute':'#777',
+      '--accent-red':'#c8102e','--accent-red-dim':'#a00d24',
+      '--accent-cyan':'#4a4a4a','--accent-cyan-dim':'#2a2a2a',
+      '--glow-red':'0 0 8px rgba(200,16,46,.35)',
+      '--glow-cyan':'0 0 6px rgba(80,80,80,.3)'
+    }
+  },
+  matrix: {
+    name: 'Matrix',
+    desc: 'Mono terminal',
+    swatches: ['#050a05', '#0d150d', '#88aa88', '#aaccaa', '#cce0cc'],
+    vars: {
+      /* per the no-green rule we keep a near-grey desaturated look */
+      '--bg':'#0a0a0a','--bg-alt':'#101010','--bg-deep':'#080808','--panel':'#0e0e0e',
+      '--line':'#252525','--line-soft':'#181818',
+      '--text':'#cccccc','--text-soft':'#999','--text-mute':'#666',
+      '--accent-red':'#aa6060','--accent-red-dim':'#774040',
+      '--accent-cyan':'#88a0a0','--accent-cyan-dim':'#5a7070',
+      '--glow-red':'0 0 8px rgba(170,96,96,.45)',
+      '--glow-cyan':'0 0 8px rgba(136,160,160,.35)'
+    }
+  }
+};
+
+let currentTheme = 'default_dark';
+
+function applyColorTheme(themeKey) {
+  const t = COLOR_THEMES[themeKey];
+  if (!t) return;
+  const root = document.documentElement;
+  Object.entries(t.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  currentTheme = themeKey;
+  // also re-apply Three.js scene colors
+  if (Viewer && Viewer.applyTheme) Viewer.applyTheme();
+  log(`Theme: ${t.name}`, 'ok');
+}
+
+function renderSetupPane(paneKey) {
+  const pane = document.getElementById('setupPane');
+  if (!pane) return;
+  document.querySelectorAll('#setupList button').forEach(b => b.classList.toggle('active', b.dataset.pane === paneKey));
+  if (paneKey === 'theme') {
+    let html = '<h2>Color Theme</h2><div class="theme-options">';
+    for (const [k, t] of Object.entries(COLOR_THEMES)) {
+      const swatchSpans = t.swatches.map(c => `<span style="background:${c};"></span>`).join('');
+      const sel = (k === currentTheme) ? ' selected' : '';
+      html += `
+        <div class="theme-card${sel}" data-theme="${k}">
+          <div class="theme-swatches">${swatchSpans}</div>
+          <div class="theme-name">${t.name}</div>
+          <div class="theme-desc">${t.desc}</div>
+        </div>`;
+    }
+    html += '</div>';
+    pane.innerHTML = html;
+    pane.querySelectorAll('.theme-card').forEach(card => {
+      card.addEventListener('click', () => {
+        applyColorTheme(card.dataset.theme);
+        pane.querySelectorAll('.theme-card').forEach(c => c.classList.toggle('selected', c.dataset.theme === card.dataset.theme));
+      });
+    });
+  } else if (paneKey === 'rendering') {
+    pane.innerHTML = `
+      <h2>Rendering</h2>
+      <p style="font-size:12px;color:var(--text-soft);">Settings affect the 3D viewport. They take effect immediately.</p>
+      <div style="display:grid;gap:10px;margin-top:14px;">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Auto-rotate speed</span>
+          <input type="range" id="setRotSpeed" min="0" max="20" value="${Math.round((Viewer.autoRotSpeed || 0.004)*1000)}" style="width:140px;">
+        </label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Layer roughness</span>
+          <input type="range" id="setRough" min="0" max="100" value="78" style="width:140px;">
+        </label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Edges opacity</span>
+          <input type="range" id="setEdgeOp" min="0" max="100" value="50" style="width:140px;">
+        </label>
+      </div>`;
+    pane.querySelector('#setRotSpeed').addEventListener('input', e => {
+      Viewer.autoRotSpeed = parseInt(e.target.value, 10) / 1000;
+    });
+  } else if (paneKey === 'behavior') {
+    pane.innerHTML = `
+      <h2>Behavior</h2>
+      <p style="font-size:12px;color:var(--text-soft);">Auto-load the demo on first open, scanline overlay, and console retention.</p>
+      <div style="display:grid;gap:12px;margin-top:14px;font-size:12px;">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Scanline overlay</span>
+          <input type="checkbox" id="setScan" checked>
+        </label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Cancel auto-rotate on click</span>
+          <input type="checkbox" id="setCancelAR" checked>
+        </label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Keep console history</span>
+          <input type="checkbox" id="setKeepHist" checked>
+        </label>
+      </div>`;
+    pane.querySelector('#setScan').addEventListener('change', e => {
+      const ov = document.querySelector('body::before');
+      // simulate by toggling a class
+      document.body.classList.toggle('no-scanlines', !e.target.checked);
+    });
+  } else if (paneKey === 'info') {
+    pane.innerHTML = `
+      <h2>Info</h2>
+      <div style="font-size:12px;line-height:1.7;">
+        <p><strong>Edition</strong> 2.0.0 — cyberpunk · motorsport</p>
+        <p><strong>Brand</strong> SHIBAYAMA MOTOR RACING</p>
+        <p><strong>Stack</strong> vanilla HTML/CSS/JS + Three.js r128 + JSZip 3.10 + pako 2.1</p>
+        <p><strong>Source</strong> <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank">github.com/HANCHIKUMA-13/PROJECT-OCV</a></p>
+        <p><strong>Live</strong> <a href="https://project-ocv.vercel.app" target="_blank">project-ocv.vercel.app</a></p>
+        <p style="margin-top:14px;font-size:10px;color:var(--text-mute);">Click "About" in the footer for the full project background.</p>
+      </div>`;
+  }
+}
+
+document.getElementById('btnSetup').addEventListener('click', () => {
+  renderSetupPane('theme');
+  openModal('modalSetup');
+});
+document.querySelectorAll('#setupList button').forEach(b => {
+  b.addEventListener('click', () => renderSetupPane(b.dataset.pane));
+});
+
+/* hide scanlines class */
+const styleScan = document.createElement('style');
+styleScan.textContent = '.no-scanlines body::before, body.no-scanlines::before { display: none; }';
+document.head.appendChild(styleScan);
+
+/* ===================== TELEMETRY (3D viewer action plot) ===================== */
+const Telemetry = {
+  history: [],          // array of { t, action, magnitude }
+  maxPoints: 80,
+  el: null,
+  init() {
+    this.el = document.getElementById('telemetry');
+    if (!this.el) return;
+    this.el.innerHTML = '<div class="tlm-label">3D Action Telemetry</div><div class="tlm-stat" id="tlmStat">— idle —</div><svg viewBox="0 0 200 80" preserveAspectRatio="none"><line class="tlm-bg-line" x1="0" y1="40" x2="200" y2="40"/><polyline id="tlmLine" fill="none" stroke="var(--accent-red)" stroke-width="1.2"/><polyline id="tlmFill" fill="rgba(255,42,68,0.12)" stroke="none"/></svg>';
+    // sample: update every 60ms
+    setInterval(() => this.sample(), 60);
+  },
+  log(action, magnitude) {
+    const t = performance.now();
+    this.history.push({ t, action, magnitude });
+    if (this.history.length > 400) this.history.shift();
+  },
+  sample() {
+    if (!this.el || !Viewer || !Viewer.scene) return;
+    // synthesize a "user activity" magnitude:
+    //   azimuth velocity + zoom velocity + rotation contribution
+    const a = Viewer.azimuth || 0;
+    const p = Viewer.polar || 0;
+    const d = Viewer.dist || 0;
+    if (this._prev === undefined) this._prev = { a, p, d };
+    const da = Math.abs(a - this._prev.a);
+    const dp = Math.abs(p - this._prev.p);
+    const dd = Math.abs(d - this._prev.d) / Math.max(d, 1);
+    let mag = (da + dp) * 30 + dd * 50;
+    if (Viewer.autoRot) mag = Math.max(mag, 8);
+    mag = Math.min(40, mag);
+    this._prev = { a, p, d };
+    this.history.push({ t: performance.now(), mag });
+    while (this.history.length > this.maxPoints) this.history.shift();
+    this.draw();
+  },
+  draw() {
+    const line = document.getElementById('tlmLine');
+    const fill = document.getElementById('tlmFill');
+    const stat = document.getElementById('tlmStat');
+    if (!line || !this.history.length) return;
+    const w = 200, h = 80, mid = 40;
+    const N = this.history.length;
+    let pts = [];
+    for (let i = 0; i < N; i++) {
+      const x = (i / (this.maxPoints - 1)) * w;
+      const m = this.history[i].mag || 0;
+      const y = mid - m;   // up = activity
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    line.setAttribute('points', pts.join(' '));
+    // fill polygon — close down to baseline
+    const fillPts = pts.concat([`${(((N-1)/(this.maxPoints-1))*w).toFixed(1)},${mid}`, `0,${mid}`]).join(' ');
+    fill.setAttribute('points', fillPts);
+    const last = this.history[N - 1];
+    const peak = Math.max(...this.history.map(p => p.mag || 0));
+    if (stat) stat.textContent = `Δ ${last.mag.toFixed(1)}  ·  peak ${peak.toFixed(0)}`;
+  }
+};
+window.addEventListener('load', () => setTimeout(() => Telemetry.init(), 800));
+
+log('OCV ready · drop a .zip or click Demo', 'ok');
 
 </script>
 </body>
