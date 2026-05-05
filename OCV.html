@@ -575,6 +575,25 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
 .axis-label.x,
 .axis-label.y,
 .axis-label.z { color: var(--text); }
+
+/* Domain dimension labels — float over the 3D viewport, sized to match
+   the existing axis-label scheme but in cyan to read as "measurements" */
+.dim-label {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  background: var(--bg-deep);
+  padding: 1px 5px;
+  border: 1px solid var(--accent-cyan);
+  pointer-events: none;
+  letter-spacing: 0.04em;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  white-space: nowrap;
+  box-shadow: 0 0 6px rgba(0, 217, 255, 0.35);
+}
 .viewer-tooltip {
   position: absolute;
   bottom: 8px;
@@ -637,13 +656,20 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
   text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
 }
 
-/* Telemetry mini-plot — motorsport-style multi-trace */
+/* Telemetry mini-plot — motorsport-style multi-trace
+   v2.0.3: edge-to-edge by escaping the prop-section padding via negative
+   margins; doubled scan rate; taller. */
 #telemetry {
-  height: 110px;
-  border: 1px solid var(--line);
+  height: 160px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-left: none;
+  border-right: none;
   background: var(--bg-deep);
   position: relative;
   overflow: hidden;
+  margin: 0 -10px -10px;        /* escape parent padding-x and bottom */
+  width: calc(100% + 20px);
 }
 #telemetry svg { width: 100%; height: 100%; display: block; }
 #telemetry .tlm-label {
@@ -939,6 +965,11 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
 .s-params   { grid-column: span 4; }
 .s-mesh     { grid-column: span 4; }
 .s-aero     { grid-column: span 4; }
+.s-init     { grid-column: span 4; }
+.s-quality  { grid-column: span 4; }
+.s-functions{ grid-column: span 4; }
+.s-decomp   { grid-column: span 6; }
+.s-cite     { grid-column: span 6; }
 
 table.kv {
   width: 100%;
@@ -1365,6 +1396,9 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
       <div class="axis-label y" id="axL_Y">Y</div>
       <div class="axis-label z" id="axL_Z">Z</div>
       <div class="axis-label" id="axL_O" style="opacity:0.7;">0</div>
+      <div class="dim-label" id="dimX">L</div>
+      <div class="dim-label" id="dimY">W</div>
+      <div class="dim-label" id="dimZ">H</div>
       <div class="viewer-tooltip" id="viewerTip">drag = orbit · shift+drag = pan · wheel = zoom</div>
     </div>
   </div>
@@ -1454,13 +1488,38 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
       <h3><span class="num">07</span>Aerodynamics</h3>
       <table class="kv" id="aeroTbl"></table>
     </section>
+
+    <section class="s-init hidden">
+      <h3><span class="num">08</span>Initial Conditions</h3>
+      <table class="kv" id="initTbl"></table>
+    </section>
+
+    <section class="s-quality hidden">
+      <h3><span class="num">09</span>Mesh Quality (snappyHexMesh)</h3>
+      <table class="kv" id="qualityTbl"></table>
+    </section>
+
+    <section class="s-functions hidden">
+      <h3><span class="num">10</span>Function Objects</h3>
+      <div id="fnObjBlock"></div>
+    </section>
+
+    <section class="s-decomp hidden">
+      <h3><span class="num">11</span>Parallel Decomposition</h3>
+      <div id="decompBlock"></div>
+    </section>
+
+    <section class="s-cite hidden">
+      <h3><span class="num">12</span>References &amp; Citations</h3>
+      <div id="citeBlock"></div>
+    </section>
   </div>
 </section>
 
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.0.2 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.1 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -1488,8 +1547,8 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
       <div class="setup-grid">
         <div class="setup-list" id="setupList">
           <button class="active" data-pane="theme">Color Theme</button>
-          <button data-pane="rendering">Rendering</button>
           <button data-pane="sections">Sections</button>
+          <button data-pane="tutorials">Tutorial Cases</button>
           <button data-pane="behavior">Behavior</button>
           <button data-pane="info">Info</button>
         </div>
@@ -1532,14 +1591,22 @@ function log(msg, level='info') {
   while (c.children.length > 30) c.removeChild(c.lastChild);
 }
 
-// ----------- theme toggle -----------
+// ----------- theme toggle (Strip 0 LT/DK) -----------
+// The 5 color themes are defined later. LT always means Blueprint; DK
+// means whichever dark theme the user last picked (defaults to default_dark).
+let lastDarkTheme = 'default_dark';
 document.getElementById('themeToggle').addEventListener('click', e => {
   const tgt = e.target.closest('div[data-mode]');
   if (!tgt) return;
   const mode = tgt.dataset.mode;
-  document.body.dataset.theme = mode;
-  document.querySelectorAll('#themeToggle div').forEach(d => d.classList.toggle('on', d.dataset.mode===mode));
-  if (Viewer.scene) Viewer.applyTheme();
+  if (typeof applyColorTheme === 'function') {
+    applyColorTheme(mode === 'light' ? 'blueprint' : (lastDarkTheme || 'default_dark'));
+  } else {
+    // fallback — only happens if the theme system hasn't loaded yet
+    document.body.dataset.theme = mode;
+    document.querySelectorAll('#themeToggle div').forEach(d => d.classList.toggle('on', d.dataset.mode===mode));
+    if (Viewer.scene) Viewer.applyTheme();
+  }
 });
 
 // ----------- column resize -----------
@@ -2074,6 +2141,60 @@ function parseAll(files) {
       out.refBox = { min:{x:mn[0],y:mn[1],z:mn[2]}, max:{x:mx[0],y:mx[1],z:mx[2]} };
     }
     out.maxGlobalCells = parseFloat(findKey(sh, 'maxGlobalCells'));
+    // mesh quality controls — mostly thresholds
+    const mqc = findBlock(sh, 'meshQualityControls');
+    if (mqc) {
+      out.meshQuality = {
+        maxNonOrtho: findKey(mqc, 'maxNonOrtho'),
+        maxBoundarySkewness: findKey(mqc, 'maxBoundarySkewness'),
+        maxInternalSkewness: findKey(mqc, 'maxInternalSkewness'),
+        maxConcave: findKey(mqc, 'maxConcave'),
+        minVol: findKey(mqc, 'minVol'),
+        minTetQuality: findKey(mqc, 'minTetQuality'),
+        minFaceWeight: findKey(mqc, 'minFaceWeight'),
+        minVolRatio: findKey(mqc, 'minVolRatio'),
+        minTwist: findKey(mqc, 'minTwist'),
+        minDeterminant: findKey(mqc, 'minDeterminant'),
+        nSmoothScale: findKey(mqc, 'nSmoothScale'),
+        errorReduction: findKey(mqc, 'errorReduction')
+      };
+    }
+  }
+
+  // function objects from controlDict — list the names of any functions block
+  if (cd) {
+    const fnBlock = findBlock(cd, 'functions');
+    if (fnBlock) {
+      // each top-level identifier { ... } inside is a function object
+      const found = [];
+      const re = /([A-Za-z_][\w]*)\s*\{/g;
+      // walk balanced braces to skip nested
+      let i = 0;
+      while (i < fnBlock.length) {
+        while (i < fnBlock.length && /\s/.test(fnBlock[i])) i++;
+        if (i >= fnBlock.length) break;
+        // try to match an identifier directly followed by {
+        const m = /^([A-Za-z_][\w]*)\s*\{/.exec(fnBlock.slice(i));
+        if (m) {
+          const name = m[1];
+          i += m[0].length;
+          let depth = 1, body = '';
+          while (i < fnBlock.length && depth) {
+            if (fnBlock[i] === '{') depth++;
+            else if (fnBlock[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+            body += fnBlock[i++];
+          }
+          const tm = body.match(/\btype\s+(\w+)\s*;/);
+          found.push({ name, type: tm ? tm[1] : '?' });
+        } else {
+          i++;
+        }
+      }
+      // also catch #include directives, which are common
+      const incs = (cd.match(/#include\s+"([^"]+)"/g) || []).map(s => s.replace(/#include\s+"/, '').replace(/"$/, ''));
+      out.functions = found;
+      out.functionIncludes = incs;
+    }
   }
 
   // decomposeParDict — OF ≤11 uses `method`, OF 12 uses `decomposer`
@@ -2226,10 +2347,10 @@ const Viewer = {
       const ro = new ResizeObserver(() => this.onResize());
       ro.observe(document.getElementById('viewer-wrap'));
     }
-    this.autoRotSpeed = 0.004;
+    this.autoRotSpeed = 0.0032;        // v2.1.0 — slowed by 20 %
     const tick = () => {
       requestAnimationFrame(tick);
-      if (this.autoRot) this.azimuth += (this.autoRotSpeed || 0.004);
+      if (this.autoRot) this.azimuth += (this.autoRotSpeed || 0.0032);
       this.updateCam();
       this.renderer.render(this.scene, this.camera);
       this.updateAxisLabels();
@@ -2246,19 +2367,50 @@ const Viewer = {
     const lO = document.getElementById('axL_O');
     const visible = this.axes && this.axes.visible;
     [lX,lY,lZ,lO].forEach(el => { if (el) el.style.display = visible ? 'block' : 'none'; });
-    if (!visible) return;
-    const L = this.axisLen || 2.5;
-    const pts = [
-      { el: lX, v: new THREE.Vector3(L*1.08, 0, 0) },
-      { el: lY, v: new THREE.Vector3(0, L*1.08, 0) },
-      { el: lZ, v: new THREE.Vector3(0, 0, L*1.08) },
-      { el: lO, v: new THREE.Vector3(0, 0, 0) }
+    if (visible) {
+      const L = this.axisLen || 2.5;
+      const pts = [
+        { el: lX, v: new THREE.Vector3(L*1.08, 0, 0) },
+        { el: lY, v: new THREE.Vector3(0, L*1.08, 0) },
+        { el: lZ, v: new THREE.Vector3(0, 0, L*1.08) },
+        { el: lO, v: new THREE.Vector3(0, 0, 0) }
+      ];
+      for (const p of pts) {
+        const v = p.v.clone().project(this.camera);
+        const onScreen = v.z < 1 && v.x > -1.05 && v.x < 1.05 && v.y > -1.05 && v.y < 1.05;
+        p.el.style.opacity = onScreen ? (p.el.id === 'axL_O' ? '0.6' : '1') : '0';
+        const sx = (v.x * 0.5 + 0.5) * w;
+        const sy = (-v.y * 0.5 + 0.5) * h;
+        p.el.style.left = sx + 'px';
+        p.el.style.top  = sy + 'px';
+      }
+    }
+    // domain dimension labels — show length / width / height on the
+    // bottom edges of the wind-tunnel box. Hide if no domain or domain
+    // box is currently toggled off.
+    const dX = document.getElementById('dimX');
+    const dY = document.getElementById('dimY');
+    const dZ = document.getElementById('dimZ');
+    if (!dX || !dY || !dZ) return;
+    const showDim = STATE.parsed && STATE.parsed.domain && this.domainBox && this.domainBox.visible;
+    [dX, dY, dZ].forEach(el => el.style.display = showDim ? 'block' : 'none');
+    if (!showDim) return;
+    const d = STATE.parsed.domain;
+    const cxw = (d.min.x + d.max.x) / 2;
+    const cyw = (d.min.y + d.max.y) / 2;
+    const czw = (d.min.z + d.max.z) / 2;
+    dX.textContent = `L ${d.size.x.toFixed(0)} m`;
+    dY.textContent = `W ${d.size.y.toFixed(0)} m`;
+    dZ.textContent = `H ${d.size.z.toFixed(0)} m`;
+    const dimPts = [
+      { el: dX, v: new THREE.Vector3(cxw,    d.min.y, d.min.z) },
+      { el: dY, v: new THREE.Vector3(d.min.x, cyw,    d.min.z) },
+      { el: dZ, v: new THREE.Vector3(d.min.x, d.min.y, czw) }
     ];
-    for (const p of pts) {
+    for (const p of dimPts) {
       const v = p.v.clone().project(this.camera);
-      // hide labels that are behind the camera or off-screen
-      const onScreen = v.z < 1 && v.x > -1.05 && v.x < 1.05 && v.y > -1.05 && v.y < 1.05;
-      p.el.style.opacity = onScreen ? (p.el.id === 'axL_O' ? '0.6' : '1') : '0';
+      const onScreen = v.z < 1 && v.x > -1.1 && v.x < 1.1 && v.y > -1.1 && v.y < 1.1;
+      p.el.style.opacity = onScreen ? '0.95' : '0';
       const sx = (v.x * 0.5 + 0.5) * w;
       const sy = (-v.y * 0.5 + 0.5) * h;
       p.el.style.left = sx + 'px';
@@ -2816,6 +2968,122 @@ function refreshUI() {
   drawParamsTable(p);
   drawMeshTable(p);
   drawAeroTable(p);
+  drawInitTable(p);
+  drawQualityTable(p);
+  drawFunctionsBlock(p);
+  drawDecompBlock(p);
+  drawCiteBlock(p);
+}
+
+function drawInitTable(p) {
+  const t = document.getElementById('initTbl'); if (!t) return;
+  const rows = [];
+  if (p.flowVelocity) rows.push(['flowVelocity', `(${p.flowVelocity.join(' ')}) m/s`]);
+  else if (p.inletU)  rows.push(['inlet U', `(${p.inletU.join(' ')}) m/s`]);
+  if (p.turbKE   != null) rows.push(['turbulent KE k', `${p.turbKE} m²/s²`]);
+  if (p.turbOmega!= null) rows.push(['turbulent ω', `${p.turbOmega} 1/s`]);
+  if (p.nu       != null) rows.push(['ν (kinematic)', `${p.nu.toExponential(2)} m²/s`]);
+  if (p.simulationType === 'LES') {
+    rows.push(['initial nuTilda', '0.05 m²/s (typical S-A)']);
+  } else if (p.rasModel) {
+    rows.push(['nut wall fn', 'nutUSpaldingWallFunction']);
+  }
+  if (!rows.length) { t.innerHTML = '<tr><td class="muted" colspan="2">no initial-condition fields parsed</td></tr>'; return; }
+  t.innerHTML = `<tr><th>Field</th><th>Value</th></tr>` + rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+function drawQualityTable(p) {
+  const t = document.getElementById('qualityTbl'); if (!t) return;
+  if (!p.meshQuality) { t.innerHTML = '<tr><td class="muted" colspan="2">snappyHexMeshDict.meshQualityControls not found</td></tr>'; return; }
+  const q = p.meshQuality;
+  const rows = [
+    ['maxNonOrtho',          q.maxNonOrtho ?? '—'],
+    ['maxBoundarySkewness',  q.maxBoundarySkewness ?? '—'],
+    ['maxInternalSkewness',  q.maxInternalSkewness ?? '—'],
+    ['maxConcave',           q.maxConcave ?? '—'],
+    ['minVol',               q.minVol ?? '—'],
+    ['minTetQuality',        q.minTetQuality ?? '—'],
+    ['minTwist',             q.minTwist ?? '—'],
+    ['minDeterminant',       q.minDeterminant ?? '—'],
+    ['minFaceWeight',        q.minFaceWeight ?? '—'],
+    ['minVolRatio',          q.minVolRatio ?? '—']
+  ];
+  t.innerHTML = `<tr><th>Threshold</th><th>Value</th></tr>` + rows.map(r => `<tr><td>${r[0]}</td><td class="val">${r[1]}</td></tr>`).join('');
+}
+
+function drawFunctionsBlock(p) {
+  const el = document.getElementById('fnObjBlock'); if (!el) return;
+  if (!p.functions && !p.functionIncludes) { el.innerHTML = '<div class="muted mono" style="font-size:10px;">no function objects parsed</div>'; return; }
+  let html = '';
+  if (p.functions && p.functions.length) {
+    html += '<table class="kv"><tr><th>Name</th><th>Type</th></tr>';
+    for (const f of p.functions) {
+      html += `<tr><td>${f.name}</td><td class="val">${f.type}</td></tr>`;
+    }
+    html += '</table>';
+  }
+  if (p.functionIncludes && p.functionIncludes.length) {
+    html += '<div style="margin-top:8px;font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.12em;">#include</div>';
+    html += '<ul style="font-family:JetBrains Mono,monospace;font-size:10px;padding-left:14px;margin-top:4px;">';
+    for (const inc of p.functionIncludes) html += `<li>${inc}</li>`;
+    html += '</ul>';
+  }
+  el.innerHTML = html || '<div class="muted">no function objects</div>';
+}
+
+function drawDecompBlock(p) {
+  const el = document.getElementById('decompBlock'); if (!el) return;
+  if (!p.nProcs) { el.innerHTML = '<div class="muted mono" style="font-size:10px;">decomposeParDict not found</div>'; return; }
+  let html = `<table class="kv">
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>numberOfSubdomains</td><td class="val">${p.nProcs}</td></tr>
+    <tr><td>method / decomposer</td><td class="val">${p.decompMethod || '—'}</td></tr>`;
+  if (p.decompDistributor) html += `<tr><td>distributor</td><td class="val">${p.decompDistributor}</td></tr>`;
+  html += '</table>';
+  // small SVG visualisation of subdomain layout (rough — only assumes square-ish)
+  const cells = p.nProcs;
+  const cols = Math.ceil(Math.sqrt(cells));
+  const rows = Math.ceil(cells / cols);
+  const cw = 28, ch = 18, gap = 2;
+  html += `<svg viewBox="0 0 ${cols*(cw+gap)+gap} ${rows*(ch+gap)+gap+18}" style="margin-top:10px;width:100%;max-width:300px;">
+    <text x="0" y="12" style="font-family:'JetBrains Mono',monospace;font-size:9px;fill:var(--text-mute);text-transform:uppercase;letter-spacing:0.12em;">subdomain map</text>`;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const idx = r * cols + c;
+    if (idx >= cells) continue;
+    const x = gap + c * (cw + gap), y = 18 + gap + r * (ch + gap);
+    const fillColor = (idx % 2 === 0) ? 'var(--bg-alt)' : 'var(--bg-deep)';
+    html += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="${fillColor}" stroke="var(--accent-red)" stroke-width="0.5"/><text x="${x+cw/2}" y="${y+ch/2+3}" text-anchor="middle" style="font-family:'JetBrains Mono',monospace;font-size:8px;fill:var(--text);">${idx}</text>`;
+  }
+  html += '</svg>';
+  el.innerHTML = html;
+}
+
+function drawCiteBlock(p) {
+  const el = document.getElementById('citeBlock'); if (!el) return;
+  el.innerHTML = `
+    <ul style="list-style:none;padding:0;margin:0;font-size:11px;line-height:1.6;">
+      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
+        <strong style="color:var(--accent-cyan);">Methodology paper</strong><br>
+        Han Chien, Chin-Cheng Wang.
+        <em>Numerical study of motorbike aerodynamic wing kit.</em>
+        Journal of Mechanics, Vol. 40, 2024, pp. 313–324.
+        <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener" style="color:var(--accent-red);">doi:10.1093/jom/ufae025</a>
+      </li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
+        <strong style="color:var(--accent-cyan);">CFD toolbox</strong><br>
+        OpenFOAM Foundation, OpenFOAM v8 / v12 — <a href="https://openfoam.org" target="_blank" rel="noopener" style="color:var(--accent-red);">openfoam.org</a>
+      </li>
+      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
+        <strong style="color:var(--accent-cyan);">Academic affiliation</strong><br>
+        Computational Power Research Group (CPRG),
+        National Taipei University of Technology (NTUT) — Prof. Chin-Cheng Wang
+      </li>
+      <li style="padding:6px 0;">
+        <strong style="color:var(--accent-cyan);">Project</strong><br>
+        Source: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank" rel="noopener" style="color:var(--accent-red);">github.com/HANCHIKUMA-13/PROJECT-OCV</a>
+        · Live: <a href="https://project-ocv.vercel.app" target="_blank" rel="noopener" style="color:var(--accent-red);">project-ocv.vercel.app</a>
+      </li>
+    </ul>`;
 }
 
 function refreshSelectionPanel() {
@@ -3163,58 +3431,41 @@ document.addEventListener('keydown', e => {
 /* ===================== ABOUT POPUP ===================== */
 const ABOUT_HTML = `
 <h1>OCV — OpenFOAM Case Viewer</h1>
-<p><em>A free, browser-based pre-flight check for vehicle CFD cases. Built collaboratively with Claude. Open source. Welcoming contributions from the OpenFOAM community, the academic CFD field, and the motorsport engineering world.</em></p>
+<p><em>A free, browser-based pre-flight check for vehicle CFD cases. Catch a misnamed boundary or an out-of-band CFL before the cluster eats your night.</em></p>
 
-<h2>Why this exists</h2>
-<p>Computational fluid dynamics is one of the most demanding workflows in modern engineering. A motorsport team or a graduate-school research group will routinely spend hours setting up a single case — meshing the vehicle geometry, defining boundary conditions, choosing turbulence models, picking time-step sizes, deciding on refinement levels — and then commit hundreds of CPU-hours to running it. When the run completes and the engineer realises that a boundary condition was misnamed, that the Courant number in the wake region was an order of magnitude too high, or that the inlet velocity was set in the wrong reference frame, that compute time is simply lost. Every cluster night that is spent re-running a case that could have been caught in a thirty-second sanity check is a night that could have been spent on better science.</p>
+<h2>What it does</h2>
+<p>Drop a zipped OpenFOAM case onto the page. OCV unpacks it in your browser, parses every dictionary it can find — <code>controlDict</code>, <code>fvSchemes</code>, <code>blockMeshDict</code>, <code>snappyHexMeshDict</code>, <code>forceCoeffs</code>, <code>0/U</code>, and the rest — renders the geometry in 3D, and lays the parsed values out across twelve dashboard sections. A one-click validator checks Mach, CFL, refinement levels, blockage ratio, BC coverage, and other vehicle-CFD rules.</p>
 
-<p>OCV is a small attempt to take that thirty-second sanity check and make it free, instant, zero-install, and accessible to anyone with a web browser. Drop a zipped OpenFOAM case onto the page and — without sending anything to a server, without registering for an account, without installing dependencies — see the geometry rendered in 3D, see every parsed dictionary value laid out in a structured dashboard, see the boundary patches with their assigned conditions, see the derived CFL number, see the Reynolds and Mach numbers automatically computed from the inlet velocity and the kinematic viscosity. Catch the problem here, before it eats a cluster night.</p>
+<p>Nothing leaves your laptop. No upload server, no account, no cookie. A single static HTML file does the work entirely client-side, which makes OCV usable on locked-down clusters, in motorsport teams with proprietary geometry, and in academic groups with sensitive cases.</p>
 
-<h2>What this is, what this is not</h2>
-<p>OCV is a <strong>pre-flight reviewer</strong>. It is not a solver. It does not run simpleFoam or pisoFoam. It does not modify your case files. It is a single static HTML page — every line of JavaScript, every dictionary parser, every Three.js material — that runs entirely on the client side. The case files you drag onto the page are read by your own browser, parsed by your own browser, and never leave your laptop. There is no telemetry beyond what your own browser does by default. There is no upload server. There is no account. There is no cookie. The bundled demo case is a static asset served from the same origin.</p>
+<h2>Methodology</h2>
+<p>The validation rules are grounded in <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener">Chien &amp; Wang, "Numerical study of motorbike aerodynamic wing kit," <em>Journal of Mechanics</em> Vol. 40 (2024) 313–324, doi:10.1093/jom/ufae025</a>. The paper's mesh-independence study, RANS (k-ω SST) vs hybrid LES comparison, and downforce-to-drag optimisation directly inform OCV's recommended y+ targets, CFL bands, surface refinement levels, and Mach assumption.</p>
 
-<p>That deliberate constraint is what makes OCV usable in environments where uploading data is restricted — university clusters with NDAs, motorsport teams with proprietary geometry, government CFD groups with sensitive aerodynamics work. If your security team will let you open a single HTML file in a browser, OCV will work for you.</p>
+<p>OCV is tuned for vehicle aerodynamics — bluff-body external flow at Re ≈ 10⁶–10⁷, U∞ up to 100 m/s, incompressible air, snappyHexMesh on a triSurface body in a rectangular wind tunnel. Other regimes parse and display, but the rules will be less informed.</p>
 
-<h2>What it does in practice</h2>
-<p>The application accepts a zipped OpenFOAM case directory. It extracts the archive in memory using JSZip, decompresses any <code>.obj.gz</code> geometry with pako, and parses every OpenFOAM dictionary it finds — controlDict, fvSchemes, fvSolution, momentumTransport, transportProperties, blockMeshDict, snappyHexMeshDict, decomposeParDict, forceCoeffs, the boundary fields in <code>0/U</code>, the include chain for boundary types, and the <code>lesFiles/</code> overrides used in two-stage RANS-then-LES workflows. The geometry is rendered with Three.js as a navigable 3D scene with named-layer groups, per-layer color and opacity controls, X/Y/Z axes, and a domain bounding box. The dashboard area below the viewport surfaces seven sections: the workflow pipeline, the turbulence/scheme/solver table, the governing equations, the boundary patch list, the derived parameters with CFL numbers, the mesh refinement settings, and the aerodynamic reference quantities. There is a one-click validation button that runs structured checks across every parsed dictionary and reports them in a timestamped console. There is a hard reset that returns every UI state to factory defaults. There is a setup panel where users can switch between five carefully-tuned color themes.</p>
-
-<h2>The methodology behind the validation rules</h2>
-<p>The validation logic in OCV is informed by <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener">Chien & Wang, "Numerical study of motorbike aerodynamic wing kit," Journal of Mechanics, Vol. 40, 2024, pp. 313–324, doi:10.1093/jom/ufae025</a>. The paper presents a mesh-independence study from 2.2 M to 163 M cells, a comparison between steady RANS (k-omega SST) and transient hybrid LES, and a downforce-to-drag optimization for an aerodynamic wing kit on a racing motorbike. OCV's parameter-checking rules — the recommended y+ targets, the CFL plausibility band, the mesh skewness tolerance, the Mach-number assumption for incompressible flow, the wake refinement level recommendation — all trace their lineage back to that paper's documented findings.</p>
-
-<p>This means OCV is not a generic CFD reviewer. It is specifically tuned for the vehicle aerodynamics regime: bluff-body external flow at Reynolds numbers of order 10⁶–10⁷, freestream velocities up to 100 m/s, incompressible-air assumption, snappyHexMesh on a triSurface body in a rectangular wind-tunnel domain. If your case sits in that regime, OCV will give you useful feedback. If you are running compressible aerospace flows, atmospheric boundary layer simulations, or multiphase flows, OCV will still parse and display your case, but the validation rules will be less informed.</p>
-
-<h2>Built with, and indebted to</h2>
-<p>OCV is the product of a collaboration between a human engineer and Claude (Anthropic), conducted across several pair-programming sessions in a chat-driven development environment. The codebase is intentionally small — a single HTML file, no build step, no framework, ES2020 vanilla JavaScript — so that anyone can read it end-to-end in a single sitting and propose changes.</p>
-
-<p>The application stands on the shoulders of:</p>
+<h2>Built with, indebted to</h2>
 <ul>
-  <li><strong>OpenFOAM</strong> — the open-source CFD toolbox developed by the OpenFOAM Foundation and ESI. Every dictionary key OCV parses comes from the OpenFOAM specification.</li>
-  <li><strong>Three.js</strong> — the WebGL 3D library by Ricardo Cabello and contributors, used for the geometry viewport.</li>
-  <li><strong>JSZip</strong> by Stuart Knightley — for decoding the uploaded archive in-browser.</li>
-  <li><strong>pako</strong> by Vitaly Puzrin — for gunzip of the bundled <code>.obj.gz</code> motorbike geometry.</li>
-  <li><strong>GitHub</strong> — for hosting the source and the v1.0.0 prototype archive.</li>
-  <li><strong>Vercel</strong> — for the zero-config static hosting that makes the live URL possible.</li>
-  <li><strong>Autodesk Fusion 360</strong> — used to author and clean the demonstration motorbike geometry.</li>
-  <li><strong>Claude</strong> by Anthropic — the AI pair-programmer that wrote a substantial portion of this code from natural-language design conversations.</li>
+  <li><strong>OpenFOAM</strong> — every dictionary key OCV reads</li>
+  <li><strong>Three.js · JSZip · pako</strong> — viewport, archive, gzip</li>
+  <li><strong>GitHub · Vercel</strong> — source &amp; static hosting</li>
+  <li><strong>Autodesk Fusion 360</strong> — demo motorbike geometry</li>
+  <li><strong>Claude</strong> (Anthropic) — pair-programmer for this codebase</li>
 </ul>
 
 <h2>Academic affiliation</h2>
-<p>Technical guidance and methodological grounding for this project are gratefully provided by the <strong>Computational Power Research Group (CPRG)</strong> at the <strong>National Taipei University of Technology (NTUT)</strong>, under <strong>Professor Chin-Cheng Wang</strong>. The wing-kit study referenced above was published with Prof. Wang as senior author. Any methodological strength in OCV is owed to that lab's published guidance; any errors are the application's own.</p>
+<p>Technical guidance and methodological grounding by the <strong>Computational Power Research Group (CPRG)</strong>, <strong>National Taipei University of Technology (NTUT)</strong>, under <strong>Professor Chin-Cheng Wang</strong>. Any methodological strength is owed to the lab; any errors are the application's own.</p>
 
-<h2>How to contribute</h2>
-<p>OCV is offered freely to the OpenFOAM user community, to academic CFD researchers, and to motorsport aerodynamics engineers. The repository accepts pull requests for additional dictionary parsers, expanded validation rules, more turbulence-model coverage, additional named geometry conventions, and translations. Issues and discussion tickets are welcomed. If you encounter a case that OCV mis-parses, please open an issue with a minimal reproducer — the project will only get better at handling the long tail of OpenFOAM cases if its parsers see more of them.</p>
+<h2>Contributions welcome</h2>
+<p>MIT-licensed, free, no paid tier. PRs for additional parsers, validation rules, turbulence models, and translations are all welcome. If OCV mis-parses your case, open an issue with a minimal reproducer.</p>
 
-<p>The project is, and will remain, MIT-licensed and free of charge. There are no plans to introduce a paid tier, telemetry, or upload-to-cloud features. The aspiration is for OCV to be one small, dependable tool in the larger toolbox that the OpenFOAM community has built together.</p>
-
-<h2>Reference</h2>
-<p>Han Chien, Chin-Cheng Wang. <em>Numerical study of motorbike aerodynamic wing kit.</em> Journal of Mechanics, Vol. 40, 2024, pp. 313–324. <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener">doi:10.1093/jom/ufae025</a></p>
-
-<h2>Live and source</h2>
-<p>Live demo: <a href="https://project-ocv.vercel.app" target="_blank" rel="noopener">project-ocv.vercel.app</a><br>
+<h2>Links</h2>
+<p>
+Live: <a href="https://project-ocv.vercel.app" target="_blank" rel="noopener">project-ocv.vercel.app</a><br>
 Source: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank" rel="noopener">github.com/HANCHIKUMA-13/PROJECT-OCV</a><br>
-v1.0.0 archive: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV/releases/tag/v1.0.0" target="_blank" rel="noopener">releases/tag/v1.0.0</a></p>
+v1.0.0 archive: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV/releases/tag/v1.0.0" target="_blank" rel="noopener">releases/tag/v1.0.0</a>
+</p>
 
-<p style="margin-top:24px;font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.16em;">SHIBAYAMA MOTOR RACING · Project OCV · Edition 2.0.0</p>
+<p style="margin-top:24px;font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.16em;">SHIBAYAMA MOTOR RACING · Project OCV · Edition 2.1.0</p>
 `;
 document.getElementById('aboutBody').innerHTML = ABOUT_HTML;
 document.getElementById('footerAbout').addEventListener('click', e => { e.preventDefault(); openModal('modalAbout'); });
@@ -3265,6 +3516,7 @@ const COLOR_THEMES = {
   },
   blueprint: {
     name: 'Blueprint',
+    dark: false,
     desc: 'Engineering paper light',
     swatches: ['#fafafa', '#ececec', '#c8102e', '#4a4a4a', '#0a0a0a'],
     vars: {
@@ -3299,11 +3551,37 @@ let currentTheme = 'default_dark';
 function applyColorTheme(themeKey) {
   const t = COLOR_THEMES[themeKey];
   if (!t) return;
+  const isLight = (t.dark === false);
+  // Remember the last dark theme so the LT/DK toggle can return to it.
+  if (!isLight) lastDarkTheme = themeKey;
+  // The base CSS declares variables on `:root` (html) AND on
+  // `[data-theme="dark"]`/`[data-theme="light"]` (body). Body's own
+  // declarations override inline styles set on documentElement, so we have
+  // to set the overrides on BOTH html AND body. We also tag the body so
+  // [data-theme] keys still work for any rule that switches on it.
   const root = document.documentElement;
-  Object.entries(t.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  Object.entries(t.vars).forEach(([k, v]) => {
+    root.style.setProperty(k, v);
+    document.body.style.setProperty(k, v);
+  });
+  // tag the body so [data-theme] selectors agree with the active theme
+  document.body.dataset.theme = isLight ? 'light' : 'dark';
   currentTheme = themeKey;
+  // sync the Strip 0 LT/DK toggle visual state
+  document.querySelectorAll('#themeToggle div').forEach(d => {
+    d.classList.toggle('on',
+      (d.dataset.mode === 'light' && isLight) ||
+      (d.dataset.mode === 'dark' && !isLight));
+  });
   // also re-apply Three.js scene colors
   if (Viewer && Viewer.applyTheme) Viewer.applyTheme();
+  if (Viewer && Viewer.axes && Viewer.scene) {
+    // re-create the gnomon to pick up the new --text-soft monotone color
+    const L = Viewer.axisLen || 2.5;
+    Viewer.scene.remove(Viewer.axes);
+    Viewer.axes = makeAxes(L);
+    Viewer.scene.add(Viewer.axes);
+  }
   log(`Theme: ${t.name}`, 'ok');
 }
 
@@ -3406,11 +3684,61 @@ function renderSetupPane(paneKey) {
     document.getElementById('setSecNone').addEventListener('click', () => {
       saveHiddenSections(new Set(STRIP3_SECTIONS.map(s => s.cls))); applyHiddenSections(); renderSetupPane('sections');
     });
+  } else if (paneKey === 'tutorials') {
+    const TUTORIALS = [
+      { name: 'motorBike (LES, transient)',
+        desc: 'Bundled — Spalart-Allmaras DDES, pisoFoam, U=100 m/s. The Chien & Wang 2024 reference case.',
+        size: '~9 MB', kind: 'bundled', action: 'load-demo' },
+      { name: 'motorBike (Steady RANS)',
+        desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline.',
+        size: '~9 MB', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBikeSteady' },
+      { name: 'pitzDaily (RANS)',
+        desc: 'Backward-facing step — classic separated flow benchmark, k-ω SST.',
+        size: '~50 KB', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/pitzDaily' },
+      { name: 'cavity (icoFoam)',
+        desc: '2D lid-driven cavity — every CFD textbook starts here.',
+        size: '~30 KB', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/cavity' },
+      { name: 'windAroundBuildings',
+        desc: 'Urban CFD — atmospheric boundary layer over a city block.',
+        size: '~200 KB', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/windAroundBuildings' }
+    ];
+    let html = '<h2>OpenFOAM Tutorial Cases</h2>' +
+      '<p style="font-size:12px;color:var(--text-soft);margin-bottom:14px;">' +
+      'Five reference cases for testing OCV. The first is bundled and loads instantly. The other four open the official OpenFOAM-12 tutorial folder on GitHub via <code>download-directory.github.io</code>, which produces a zip you can drop back onto OCV.</p>' +
+      '<div style="display:grid;gap:8px;">';
+    for (const tc of TUTORIALS) {
+      const tag = tc.kind === 'bundled' ?
+        '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">BUNDLED</span>' :
+        '<span style="background:var(--accent-cyan);color:#000;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">GITHUB</span>';
+      html += `<div style="border:1px solid var(--line);padding:10px 12px;background:var(--bg-alt);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          ${tag}
+          <strong style="font-size:12px;">${tc.name}</strong>
+          <span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text-mute);">${tc.size}</span>
+        </div>
+        <p style="font-size:10px;color:var(--text-soft);margin:4px 0 8px;">${tc.desc}</p>
+        <button data-tut="${tc.kind === 'bundled' ? 'demo' : tc.path}" data-repo="${tc.repo || ''}" style="font-size:9px;">${tc.kind === 'bundled' ? 'Load Now' : 'Download via GitHub'}</button>
+      </div>`;
+    }
+    html += '</div>';
+    pane.innerHTML = html;
+    pane.querySelectorAll('button[data-tut]').forEach(b => {
+      b.addEventListener('click', () => {
+        const tut = b.dataset.tut;
+        if (tut === 'demo') { closeModal('modalSetup'); loadDemo(); return; }
+        const url = `https://download-directory.github.io/?url=${encodeURIComponent('https://github.com/' + b.dataset.repo + '/tree/master/' + tut)}`;
+        window.open(url, '_blank');
+      });
+    });
   } else if (paneKey === 'info') {
     pane.innerHTML = `
       <h2>Info</h2>
       <div style="font-size:12px;line-height:1.7;">
-        <p><strong>Edition</strong> 2.0.0 — cyberpunk · motorsport</p>
+        <p><strong>Edition</strong> 2.0.3 — cyberpunk · motorsport</p>
         <p><strong>Brand</strong> SHIBAYAMA MOTOR RACING</p>
         <p><strong>Stack</strong> vanilla HTML/CSS/JS + Three.js r128 + JSZip 3.10 + pako 2.1</p>
         <p><strong>Source</strong> <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank">github.com/HANCHIKUMA-13/PROJECT-OCV</a></p>
@@ -3442,7 +3770,7 @@ document.head.appendChild(styleScan);
    ============================================================================= */
 const Telemetry = {
   history: [],          // array of { t, dx, dy, dz }
-  maxPoints: 140,
+  maxPoints: 280,       // 2x sample rate → 2x density
   el: null,
   mouseX: 0, mouseY: 0, prevMX: 0, prevMY: 0,
   pendingDx: 0, pendingDy: 0, wheelZ: 0,
@@ -3456,12 +3784,15 @@ const Telemetry = {
       '<span style="color:var(--accent-cyan);"><i></i>Y</span>' +
       '<span style="color:var(--text);"><i></i>Z</span></div>' +
       '<div class="tlm-stat" id="tlmStat">— idle —</div>' +
-      '<svg viewBox="0 0 200 110" preserveAspectRatio="none">' +
-      '<line class="tlm-bg-line" x1="0" y1="55" x2="200" y2="55"/>' +
-      '<line class="tlm-bg-line" x1="0" y1="27" x2="200" y2="27"/>' +
-      '<line class="tlm-bg-line" x1="0" y1="83" x2="200" y2="83"/>' +
-      '<polyline id="tlmLineX" fill="none" stroke="var(--accent-red)" stroke-width="1"/>' +
-      '<polyline id="tlmLineY" fill="none" stroke="var(--accent-cyan)" stroke-width="1"/>' +
+      '<svg viewBox="0 0 280 160" preserveAspectRatio="none">' +
+      '<line class="tlm-bg-line" x1="0"   y1="80" x2="280" y2="80"/>' +
+      '<line class="tlm-bg-line" x1="0"   y1="40" x2="280" y2="40"/>' +
+      '<line class="tlm-bg-line" x1="0"   y1="120" x2="280" y2="120"/>' +
+      '<line class="tlm-bg-line" x1="70"  y1="0"  x2="70"  y2="160"/>' +
+      '<line class="tlm-bg-line" x1="140" y1="0"  x2="140" y2="160"/>' +
+      '<line class="tlm-bg-line" x1="210" y1="0"  x2="210" y2="160"/>' +
+      '<polyline id="tlmLineX" fill="none" stroke="var(--accent-red)" stroke-width="1.1"/>' +
+      '<polyline id="tlmLineY" fill="none" stroke="var(--accent-cyan)" stroke-width="1.1"/>' +
       '<polyline id="tlmLineZ" fill="none" stroke="var(--text)" stroke-width="0.9" opacity="0.65"/>' +
       '</svg>';
     // attach pointer listeners to the 3D viewer canvas
@@ -3478,8 +3809,8 @@ const Telemetry = {
       canvas.addEventListener('pointerleave', () => { this.inside = false; });
       canvas.addEventListener('wheel', e => { this.wheelZ += e.deltaY * 0.05; }, { passive: true });
     }
-    // sample @ ~16 fps
-    setInterval(() => this.sample(), 60);
+    // 2x scan rate — sample every 30 ms (~33 fps)
+    setInterval(() => this.sample(), 30);
   },
   sample() {
     const dx = this.inside ? this.pendingDx : 0;
@@ -3498,7 +3829,7 @@ const Telemetry = {
     const lineZ = document.getElementById('tlmLineZ');
     const stat  = document.getElementById('tlmStat');
     if (!lineX || !this.history.length) return;
-    const w = 200, mid = 55, range = 20;
+    const w = 280, mid = 80, range = 40;
     const N = this.history.length;
     const ptsX = [], ptsY = [], ptsZ = [];
     const clip = v => Math.max(-range, Math.min(range, v));
@@ -3529,8 +3860,23 @@ const STRIP3_SECTIONS = [
   { cls: 's-bcs',      title: '04 · Boundary Patches' },
   { cls: 's-params',   title: '05 · Parameters · CFL' },
   { cls: 's-mesh',     title: '06 · Mesh Setup' },
-  { cls: 's-aero',     title: '07 · Aerodynamics' }
+  { cls: 's-aero',     title: '07 · Aerodynamics' },
+  { cls: 's-init',     title: '08 · Initial Conditions',  defaultHidden: true },
+  { cls: 's-quality',  title: '09 · Mesh Quality',         defaultHidden: true },
+  { cls: 's-functions',title: '10 · Function Objects',     defaultHidden: true },
+  { cls: 's-decomp',   title: '11 · Parallel Decomposition', defaultHidden: true },
+  { cls: 's-cite',     title: '12 · References & Citations', defaultHidden: true }
 ];
+
+// On first visit, hide the v2.0.3 default-hidden sections. After that, the
+// user's localStorage preference controls everything.
+function applyDefaultHiddenSections() {
+  const KEY = 'ocv-sections-init-v203';
+  if (localStorage.getItem(KEY)) return;
+  const initial = new Set(STRIP3_SECTIONS.filter(s => s.defaultHidden).map(s => s.cls));
+  saveHiddenSections(initial);
+  localStorage.setItem(KEY, '1');
+}
 const SECTIONS_KEY = 'ocv-hidden-sections';
 function getHiddenSections() {
   try { return new Set(JSON.parse(localStorage.getItem(SECTIONS_KEY) || '[]')); }
@@ -3568,9 +3914,13 @@ function injectSectionCloseButtons() {
   });
   applyHiddenSections();
 }
-window.addEventListener('load', () => setTimeout(injectSectionCloseButtons, 200));
+window.addEventListener('load', () => setTimeout(() => {
+  applyDefaultHiddenSections();
+  injectSectionCloseButtons();
+}, 200));
 
 log('OCV ready · drop a .zip or click Demo', 'ok');
 
 </script>
-</
+</body>
+</html>
