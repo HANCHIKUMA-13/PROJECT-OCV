@@ -1563,7 +1563,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.1.5 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.6 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -3086,21 +3086,16 @@ function drawDecompBlock(p) {
     <tr><td>method / decomposer</td><td class="val">${p.decompMethod || '—'}</td></tr>`;
   if (p.decompDistributor) html += `<tr><td>distributor</td><td class="val">${p.decompDistributor}</td></tr>`;
   html += '</table>';
-  // small SVG visualisation of subdomain layout (rough — only assumes square-ish)
+  // CSS-grid subdomain map — absolute 10 px font matches the surrounding tables
   const cells = p.nProcs;
   const cols = Math.ceil(Math.sqrt(cells));
-  const rows = Math.ceil(cells / cols);
-  const cw = 28, ch = 18, gap = 2;
-  html += `<svg viewBox="0 0 ${cols*(cw+gap)+gap} ${rows*(ch+gap)+gap+18}" style="margin-top:10px;width:100%;max-width:300px;">
-    <text x="0" y="12" style="font-family:'JetBrains Mono',monospace;font-size:9px;fill:var(--text-mute);text-transform:uppercase;letter-spacing:0.12em;">subdomain map</text>`;
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-    const idx = r * cols + c;
-    if (idx >= cells) continue;
-    const x = gap + c * (cw + gap), y = 18 + gap + r * (ch + gap);
-    const fillColor = (idx % 2 === 0) ? 'var(--bg-alt)' : 'var(--bg-deep)';
-    html += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="${fillColor}" stroke="var(--accent-red)" stroke-width="0.5"/><text x="${x+cw/2}" y="${y+ch/2+3}" text-anchor="middle" style="font-family:'JetBrains Mono',monospace;font-size:8px;fill:var(--text);">${idx}</text>`;
+  html += `<div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.12em;">subdomain map</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:2px;margin-top:6px;max-width:240px;">`;
+  for (let i = 0; i < cells; i++) {
+    const fillBg = (i % 2 === 0) ? 'var(--bg-alt)' : 'var(--bg-deep)';
+    html += `<div style="background:${fillBg};border:1px solid var(--accent-red);padding:5px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);">${i}</div>`;
   }
-  html += '</svg>';
+  html += '</div>';
   el.innerHTML = html;
 }
 
@@ -3131,21 +3126,55 @@ function refreshSelectionPanel() {
 function drawPipeline(p) {
   const el = document.getElementById('pipeline');
   el.innerHTML = '';
-  const steps = [
-    { t:'01 GEOMETRY', h: STATE.obj ? `${Object.keys(STATE.obj.groups).length} groups` : '— no obj —', d:'.obj surface mesh' },
-    { t:'02 BLOCKMESH', h: p.cells ? `${p.cells.x}×${p.cells.y}×${p.cells.z}` : '—', d: p.domain ? `${p.domain.size.x}×${p.domain.size.y}×${p.domain.size.z} m` : '' },
-    { t:'03 SNAPPYHEXMESH', h: p.refSurface ? `Lvl ${p.refSurface.min}–${p.refSurface.max}` : '—', d: p.refRegion ? `wake lvl ${p.refRegion.level}` : '' },
-    { t:'04 RANS PRECURSOR', h: 'simpleFoam', d: p.rasModel ? p.rasModel : 'S-A · 500 iter' },
-    { t:'05 LES', h: p.lesApplication || 'pisoFoam', d: p.lesModel ? `${p.lesModel}, Δt=${p.lesDeltaT}s` : '' },
-    { t:'06 POST', h:'forceCoeffs', d:'cuttingPlane · streamLines' }
-  ];
-  steps.forEach((s, i) => {
+  // detect what stages this case actually has
+  const hasRANS = !!p.rasModel || p.simulationType === 'RAS' ||
+                  /simpleFoam/i.test(p.application || '');
+  const hasLES  = !!p.lesApplication || !!p.lesModel ||
+                  p.simulationType === 'LES';
+  const stages = [];
+  stages.push({
+    t:'GEOMETRY',
+    h: STATE.obj ? `${Object.keys(STATE.obj.groups).length} groups` : '— no obj —',
+    d:'.obj surface mesh'
+  });
+  stages.push({
+    t:'BLOCKMESH',
+    h: p.cells ? `${p.cells.x}×${p.cells.y}×${p.cells.z}` : '—',
+    d: p.domain ? `${p.domain.size.x}×${p.domain.size.y}×${p.domain.size.z} m` : ''
+  });
+  stages.push({
+    t:'SNAPPYHEXMESH',
+    h: p.refSurface ? `Lvl ${p.refSurface.min}–${p.refSurface.max}` : '—',
+    d: p.refRegion ? `wake lvl ${p.refRegion.level}` : ''
+  });
+  if (hasRANS) {
+    stages.push({
+      t: hasLES ? 'RANS PRECURSOR' : 'RANS',
+      h: p.application && /simpleFoam/i.test(p.application) ? 'simpleFoam' : (p.solverModule || 'simpleFoam'),
+      d: p.rasModel || ''
+    });
+  }
+  if (hasLES) {
+    stages.push({
+      t:'LES',
+      h: p.lesApplication || 'pisoFoam',
+      d: p.lesModel ? `${p.lesModel}${p.lesDeltaT ? ', Δt=' + p.lesDeltaT + 's' : ''}` : ''
+    });
+  }
+  stages.push({
+    t:'POST',
+    h:'forceCoeffs',
+    d:'cuttingPlane · streamLines'
+  });
+  // pad numeric prefix
+  stages.forEach((s, i) => { s.t = String(i + 1).padStart(2, '0') + ' ' + s.t; });
+  stages.forEach((s, i) => {
     const div = document.createElement('div');
     div.className = 'step';
     div.innerHTML = `<div class="t">${s.t}</div><div class="h">${s.h}</div><div class="d">${s.d}</div>`;
     el.appendChild(div);
-    if (i < steps.length-1) {
-      const a = document.createElement('div'); a.className='arrow'; a.textContent='▶';
+    if (i < stages.length - 1) {
+      const a = document.createElement('div'); a.className = 'arrow'; a.textContent = '▶';
       el.appendChild(a);
     }
   });
