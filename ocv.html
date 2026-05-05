@@ -351,6 +351,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
   opacity: 0.5;
 }
 .col-body { padding: 8px 10px; flex: 1; min-height: 0; overflow: auto; }
+/* Hide the visible scrollbar on the geometry tree + dashboard strip while
+   keeping the content scrollable. WebKit + Firefox + IE/old-Edge variants. */
+#colLeft .col-body::-webkit-scrollbar,
+#colRight .col-body::-webkit-scrollbar,
+#strip3::-webkit-scrollbar { display: none; width: 0; height: 0; }
+#colLeft .col-body,
+#colRight .col-body,
+#strip3 { scrollbar-width: none; -ms-overflow-style: none; }
 
 /* === Geometry / Layers panel — redesigned for legibility === */
 .geom-tree { font-size: 11px; }
@@ -708,6 +716,48 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
   width: 8px; height: 2px;
   background: currentColor;
 }
+/* Telemetry sample-rate slider — sits below the legend in the top-right */
+#telemetry .tlm-rate {
+  position: absolute;
+  top: 18px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-mute);
+  z-index: 2;
+  pointer-events: auto;
+}
+#telemetry .tlm-rate input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 3px;
+  background: var(--line);
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+#telemetry .tlm-rate input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 7px;
+  height: 9px;
+  background: var(--accent-cyan);
+  border: 0;
+  cursor: pointer;
+  border-radius: 0;
+}
+#telemetry .tlm-rate input[type=range]::-moz-range-thumb {
+  width: 7px;
+  height: 9px;
+  background: var(--accent-cyan);
+  border: 0;
+  cursor: pointer;
+  border-radius: 0;
+}
+#telemetry .tlm-rate-val { min-width: 28px; color: var(--accent-cyan); }
 #telemetry .tlm-bg-line {
   stroke: var(--line);
   stroke-width: 0.4;
@@ -1513,7 +1563,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.1.2 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.3 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -3507,6 +3557,20 @@ const COLOR_THEMES = {
       '--glow-red':'0 0 14px rgba(255,112,48,.6),0 0 2px rgba(255,112,48,.85)',
       '--glow-cyan':'0 0 12px rgba(255,208,112,.5),0 0 2px rgba(255,208,112,.8)'
     }
+  },
+  matrix: {
+    name: 'Matrix',
+    desc: 'Phosphor green CRT',
+    swatches: ['#000000', '#001008', '#00ff41', '#80ff80', '#008820'],
+    vars: {
+      '--bg':'#000000','--bg-alt':'#001008','--bg-deep':'#000400','--panel':'#001a0c',
+      '--line':'#0a3a18','--line-soft':'#06200c',
+      '--text':'#00ff41','--text-soft':'#00b030','--text-mute':'#006a20',
+      '--accent-red':'#80ffa0','--accent-red-dim':'#40c070',
+      '--accent-cyan':'#00ff80','--accent-cyan-dim':'#00a050',
+      '--glow-red':'0 0 14px rgba(0,255,65,.6),0 0 2px rgba(0,255,65,.9)',
+      '--glow-cyan':'0 0 12px rgba(0,255,128,.55),0 0 2px rgba(0,255,128,.85)'
+    }
   }
 };
 
@@ -3738,19 +3802,28 @@ document.head.appendChild(styleScan);
    ============================================================================= */
 const Telemetry = {
   history: [],          // array of { t, dx, dy, dz }
-  maxPoints: 280,       // 2x sample rate → 2x density
+  maxPoints: 280,
   el: null,
   mouseX: 0, mouseY: 0, prevMX: 0, prevMY: 0,
   pendingDx: 0, pendingDy: 0, wheelZ: 0,
   inside: false,
+  sampleMs: 10,         // default 3x faster than the previous 30 ms
+  _timer: null,
   init() {
     this.el = document.getElementById('telemetry');
     if (!this.el) return;
+    // pull saved rate from localStorage (range 5–100 ms)
+    const savedRate = parseInt(localStorage.getItem('ocv-tlm-rate') || '', 10);
+    if (!Number.isNaN(savedRate) && savedRate >= 5 && savedRate <= 100) this.sampleMs = savedRate;
     this.el.innerHTML =
       '<div class="tlm-label">3D Viewer Telemetry · mouse Δ</div>' +
       '<div class="tlm-legend"><span style="color:var(--accent-red);"><i></i>X</span>' +
       '<span style="color:var(--accent-cyan);"><i></i>Y</span>' +
       '<span style="color:var(--text);"><i></i>Z</span></div>' +
+      '<div class="tlm-rate" title="Sample interval (ms) — lower = faster scan">' +
+      '<input type="range" id="tlmRate" min="5" max="100" step="1" value="' + this.sampleMs + '">' +
+      '<span class="tlm-rate-val" id="tlmRateVal">' + this.sampleMs + 'ms</span>' +
+      '</div>' +
       '<div class="tlm-stat" id="tlmStat">— idle —</div>' +
       '<svg viewBox="0 0 280 160" preserveAspectRatio="none">' +
       '<line class="tlm-bg-line" x1="0"   y1="80" x2="280" y2="80"/>' +
@@ -3763,6 +3836,18 @@ const Telemetry = {
       '<polyline id="tlmLineY" fill="none" stroke="var(--accent-cyan)" stroke-width="1.1"/>' +
       '<polyline id="tlmLineZ" fill="none" stroke="var(--text)" stroke-width="0.9" opacity="0.65"/>' +
       '</svg>';
+    // wire the rate slider — restarts the sampling interval and persists choice
+    const rate = document.getElementById('tlmRate');
+    const rateVal = document.getElementById('tlmRateVal');
+    if (rate) {
+      rate.addEventListener('input', e => {
+        const v = parseInt(e.target.value, 10);
+        this.sampleMs = v;
+        if (rateVal) rateVal.textContent = v + 'ms';
+        localStorage.setItem('ocv-tlm-rate', String(v));
+        this._restartTimer();
+      });
+    }
     // attach pointer listeners to the 3D viewer canvas
     const canvas = document.getElementById('viewer-canvas');
     if (canvas) {
@@ -3777,8 +3862,11 @@ const Telemetry = {
       canvas.addEventListener('pointerleave', () => { this.inside = false; });
       canvas.addEventListener('wheel', e => { this.wheelZ += e.deltaY * 0.05; }, { passive: true });
     }
-    // 2x scan rate — sample every 30 ms (~33 fps)
-    setInterval(() => this.sample(), 30);
+    this._restartTimer();
+  },
+  _restartTimer() {
+    if (this._timer) clearInterval(this._timer);
+    this._timer = setInterval(() => this.sample(), this.sampleMs);
   },
   sample() {
     const dx = this.inside ? this.pendingDx : 0;
