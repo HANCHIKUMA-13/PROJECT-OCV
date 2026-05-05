@@ -969,7 +969,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; clip-path: none; }
 .s-quality  { grid-column: span 4; }
 .s-functions{ grid-column: span 4; }
 .s-decomp   { grid-column: span 6; }
-.s-cite     { grid-column: span 6; }
 
 table.kv {
   width: 100%;
@@ -1508,18 +1507,13 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
       <h3><span class="num">11</span>Parallel Decomposition</h3>
       <div id="decompBlock"></div>
     </section>
-
-    <section class="s-cite hidden">
-      <h3><span class="num">12</span>References &amp; Citations</h3>
-      <div id="citeBlock"></div>
-    </section>
   </div>
 </section>
 
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.1.1 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.2 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -2972,7 +2966,6 @@ function refreshUI() {
   drawQualityTable(p);
   drawFunctionsBlock(p);
   drawDecompBlock(p);
-  drawCiteBlock(p);
 }
 
 function drawInitTable(p) {
@@ -3056,34 +3049,6 @@ function drawDecompBlock(p) {
   }
   html += '</svg>';
   el.innerHTML = html;
-}
-
-function drawCiteBlock(p) {
-  const el = document.getElementById('citeBlock'); if (!el) return;
-  el.innerHTML = `
-    <ul style="list-style:none;padding:0;margin:0;font-size:11px;line-height:1.6;">
-      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
-        <strong style="color:var(--accent-cyan);">Methodology paper</strong><br>
-        Han Chien, Chin-Cheng Wang.
-        <em>Numerical study of motorbike aerodynamic wing kit.</em>
-        Journal of Mechanics, Vol. 40, 2024, pp. 313–324.
-        <a href="https://academic.oup.com/jom/article/doi/10.1093/jom/ufae025/7693724" target="_blank" rel="noopener" style="color:var(--accent-red);">doi:10.1093/jom/ufae025</a>
-      </li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
-        <strong style="color:var(--accent-cyan);">CFD toolbox</strong><br>
-        OpenFOAM Foundation, OpenFOAM v8 / v12 — <a href="https://openfoam.org" target="_blank" rel="noopener" style="color:var(--accent-red);">openfoam.org</a>
-      </li>
-      <li style="padding:6px 0;border-bottom:1px solid var(--line-soft);">
-        <strong style="color:var(--accent-cyan);">Academic affiliation</strong><br>
-        Computational Power Research Group (CPRG),
-        National Taipei University of Technology (NTUT) — Prof. Chin-Cheng Wang
-      </li>
-      <li style="padding:6px 0;">
-        <strong style="color:var(--accent-cyan);">Project</strong><br>
-        Source: <a href="https://github.com/HANCHIKUMA-13/PROJECT-OCV" target="_blank" rel="noopener" style="color:var(--accent-red);">github.com/HANCHIKUMA-13/PROJECT-OCV</a>
-        · Live: <a href="https://project-ocv.vercel.app" target="_blank" rel="noopener" style="color:var(--accent-red);">project-ocv.vercel.app</a>
-      </li>
-    </ul>`;
 }
 
 function refreshSelectionPanel() {
@@ -3529,19 +3494,18 @@ const COLOR_THEMES = {
       '--glow-cyan':'0 0 6px rgba(80,80,80,.3)'
     }
   },
-  matrix: {
-    name: 'Matrix',
-    desc: 'Mono terminal',
-    swatches: ['#050a05', '#0d150d', '#88aa88', '#aaccaa', '#cce0cc'],
+  terminal: {
+    name: 'Terminal',
+    desc: 'Amber CRT',
+    swatches: ['#000000', '#0a0805', '#ffb060', '#ff7030', '#ffd070'],
     vars: {
-      /* per the no-green rule we keep a near-grey desaturated look */
-      '--bg':'#0a0a0a','--bg-alt':'#101010','--bg-deep':'#080808','--panel':'#0e0e0e',
-      '--line':'#252525','--line-soft':'#181818',
-      '--text':'#cccccc','--text-soft':'#999','--text-mute':'#666',
-      '--accent-red':'#aa6060','--accent-red-dim':'#774040',
-      '--accent-cyan':'#88a0a0','--accent-cyan-dim':'#5a7070',
-      '--glow-red':'0 0 8px rgba(170,96,96,.45)',
-      '--glow-cyan':'0 0 8px rgba(136,160,160,.35)'
+      '--bg':'#000000','--bg-alt':'#0a0805','--bg-deep':'#020100','--panel':'#0a0805',
+      '--line':'#3a2c14','--line-soft':'#241a0a',
+      '--text':'#ffb060','--text-soft':'#cc8a40','--text-mute':'#7d6634',
+      '--accent-red':'#ff7030','--accent-red-dim':'#cc4a18',
+      '--accent-cyan':'#ffd070','--accent-cyan-dim':'#a07820',
+      '--glow-red':'0 0 14px rgba(255,112,48,.6),0 0 2px rgba(255,112,48,.85)',
+      '--glow-cyan':'0 0 12px rgba(255,208,112,.5),0 0 2px rgba(255,208,112,.8)'
     }
   }
 };
@@ -3655,7 +3619,7 @@ function renderSetupPane(paneKey) {
     });
   } else if (paneKey === 'sections') {
     const hidden = getHiddenSections();
-    let html = '<h2>Strip 3 Sections</h2>' +
+    let html = '<h2>Dashboard Sections</h2>' +
       '<p style="font-size:12px;color:var(--text-soft);margin-bottom:14px;">' +
       'Tick or untick to show/hide dashboard sections. Click the × on any section header in the dashboard to hide it from there too — toggle it back on here.</p>' +
       '<div style="display:grid;gap:10px;">';
@@ -3686,9 +3650,13 @@ function renderSetupPane(paneKey) {
     });
   } else if (paneKey === 'tutorials') {
     const TUTORIALS = [
-      { name: 'motorBike (LES, transient)',
+      { name: 'motorBike (LES, transient) — bundled demo',
         desc: 'Bundled — Spalart-Allmaras DDES, pisoFoam, U=100 m/s. The Chien & Wang 2024 reference case.',
         size: '~9 MB', kind: 'bundled', action: 'load-demo' },
+      { name: 'motorBike (LES) — OpenFOAM official',
+        desc: 'OF12 official transient case — RANS precursor handed off to S-A DDES via lesFiles/. Same geometry as the bundled case but stock parameters.',
+        size: '~9 MB', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBike' },
       { name: 'motorBike (Steady RANS)',
         desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline.',
         size: '~9 MB', kind: 'github',
@@ -3864,8 +3832,7 @@ const STRIP3_SECTIONS = [
   { cls: 's-init',     title: '08 · Initial Conditions',  defaultHidden: true },
   { cls: 's-quality',  title: '09 · Mesh Quality',         defaultHidden: true },
   { cls: 's-functions',title: '10 · Function Objects',     defaultHidden: true },
-  { cls: 's-decomp',   title: '11 · Parallel Decomposition', defaultHidden: true },
-  { cls: 's-cite',     title: '12 · References & Citations', defaultHidden: true }
+  { cls: 's-decomp',   title: '11 · Parallel Decomposition', defaultHidden: true }
 ];
 
 // On first visit, hide the v2.0.3 default-hidden sections. After that, the
@@ -3905,7 +3872,7 @@ function injectSectionCloseButtons() {
     const close = document.createElement('button');
     close.className = 'section-close';
     close.textContent = '×';
-    close.title = 'Hide this section · re-enable via Setup → Sections';
+    close.title = 'Hide section · re-enable via Setup → Sections';
     close.addEventListener('click', e => {
       e.stopPropagation();
       setSectionHidden(cls, true);
