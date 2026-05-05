@@ -1563,7 +1563,7 @@ svg.diag .refbox { stroke: var(--text); stroke-width: 0.6; stroke-dasharray: 2 2
 <!-- ============== STRIP 4 ============== -->
 <footer id="strip4">
   <div>OCV — OpenFOAM Case Viewer</div>
-  <div>Edition 2.1.3 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
+  <div>Edition 2.1.4 · 05 MAY 2026 · <a id="footerAbout" href="#about" class="brand-link">SHIBAYAMA MOTOR RACING</a></div>
   <div>© Project OCV · MIT-style demo</div>
 </footer>
 
@@ -3713,18 +3713,26 @@ function renderSetupPane(paneKey) {
       saveHiddenSections(new Set(STRIP3_SECTIONS.map(s => s.cls))); applyHiddenSections(); renderSetupPane('sections');
     });
   } else if (paneKey === 'tutorials') {
+    // Some OpenFOAM tutorials don't ship the heavy geometry file inside the
+    // case folder — it lives in `tutorials/resources/geometry/`. The two
+    // motorBike cases below get a "+ Geometry" button that links directly
+    // to the .obj.gz so the user can drop it into `constant/triSurface/`
+    // (or just open it with OCV alongside the case).
+    const MOTORBIKE_OBJ_URL = 'https://git.psu.edu/axp5530/ics-rpm-tests/-/raw/9edc21ab01daa9f8484e7bbf5e66de77c2a914ed/openfoam/2.3.1/tutorials/resources/geometry/motorBike.obj.gz?inline=false';
     const TUTORIALS = [
       { name: 'motorBike (LES, transient) — bundled demo',
         desc: 'Bundled — Spalart-Allmaras DDES, pisoFoam, U=100 m/s. The Chien & Wang 2024 reference case.',
         size: '~9 MB', kind: 'bundled', action: 'load-demo' },
       { name: 'motorBike (LES) — OpenFOAM official',
-        desc: 'OF12 official transient case — RANS precursor handed off to S-A DDES via lesFiles/. Same geometry as the bundled case but stock parameters.',
-        size: '~9 MB', kind: 'github',
-        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBike' },
+        desc: 'OF12 official transient case — RANS precursor handed off to S-A DDES via lesFiles/. Geometry not bundled in the case folder; grab the .obj.gz separately.',
+        size: '~50 KB case · 8.5 MB geometry', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBike',
+        geometry: MOTORBIKE_OBJ_URL },
       { name: 'motorBike (Steady RANS)',
-        desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline.',
-        size: '~9 MB', kind: 'github',
-        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBikeSteady' },
+        desc: 'OF12 official — k-ω SST, simpleFoam, vehicle aerodynamics baseline. Geometry not bundled in the case folder; grab the .obj.gz separately.',
+        size: '~50 KB case · 8.5 MB geometry', kind: 'github',
+        repo: 'OpenFOAM/OpenFOAM-12', path: 'tutorials/incompressibleFluid/motorBikeSteady',
+        geometry: MOTORBIKE_OBJ_URL },
       { name: 'pitzDaily (RANS)',
         desc: 'Backward-facing step — classic separated flow benchmark, k-ω SST.',
         size: '~50 KB', kind: 'github',
@@ -3746,6 +3754,9 @@ function renderSetupPane(paneKey) {
       const tag = tc.kind === 'bundled' ?
         '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">BUNDLED</span>' :
         '<span style="background:var(--accent-cyan);color:#000;padding:1px 6px;font-size:8px;letter-spacing:0.1em;">GITHUB</span>';
+      const geomBtn = tc.geometry
+        ? `<button data-geom="${tc.geometry}" style="font-size:9px;">+ Geometry (.obj.gz)</button>`
+        : '';
       html += `<div style="border:1px solid var(--line);padding:10px 12px;background:var(--bg-alt);">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
           ${tag}
@@ -3753,7 +3764,10 @@ function renderSetupPane(paneKey) {
           <span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text-mute);">${tc.size}</span>
         </div>
         <p style="font-size:10px;color:var(--text-soft);margin:4px 0 8px;">${tc.desc}</p>
-        <button data-tut="${tc.kind === 'bundled' ? 'demo' : tc.path}" data-repo="${tc.repo || ''}" style="font-size:9px;">${tc.kind === 'bundled' ? 'Load Now' : 'Download via GitHub'}</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button data-tut="${tc.kind === 'bundled' ? 'demo' : tc.path}" data-repo="${tc.repo || ''}" style="font-size:9px;">${tc.kind === 'bundled' ? 'Load Now' : 'Download via GitHub'}</button>
+          ${geomBtn}
+        </div>
       </div>`;
     }
     html += '</div>';
@@ -3765,6 +3779,10 @@ function renderSetupPane(paneKey) {
         const url = `https://download-directory.github.io/?url=${encodeURIComponent('https://github.com/' + b.dataset.repo + '/tree/master/' + tut)}`;
         window.open(url, '_blank');
       });
+    });
+    // direct geometry download for tutorials whose .obj.gz isn't bundled
+    pane.querySelectorAll('button[data-geom]').forEach(b => {
+      b.addEventListener('click', () => window.open(b.dataset.geom, '_blank'));
     });
   } else if (paneKey === 'info') {
     pane.innerHTML = `
